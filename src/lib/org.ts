@@ -128,12 +128,10 @@ export function removeEngineer(org: Organization, teamId: string, engineerId: st
   if (!team || !engineer || engineer.role !== "engineer" || !engineer.active) {
     return next;
   }
-  engineer.active = false;
-  engineer.removedAtTick = next.tick;
-  engineer.teamId = team.id;
-  next.removedPeopleIds.push(engineerId);
   team.engineerIds = team.engineerIds.filter((id) => id !== engineerId);
-  addEvent(next, "remove-person", `${engineer.name} was removed from ${team.name}.`);
+  next.removedPeopleIds = next.removedPeopleIds.filter((id) => id !== engineerId);
+  delete next.people[engineerId];
+  addEvent(next, "scenario", `${engineer.name} was deleted from ${team.name}.`);
   return next;
 }
 
@@ -149,37 +147,39 @@ export function removeTeamSubtree(org: Organization, teamId: string): Organizati
     parent.childTeamIds = parent.childTeamIds.filter((id) => id !== team.id);
   }
 
-  const deactivateTeam = (currentTeamId: string) => {
+  const teamIdsToDelete: string[] = [];
+  const collectTeam = (currentTeamId: string) => {
     const currentTeam = next.teams[currentTeamId];
-    if (!currentTeam?.active) {
+    if (!currentTeam) {
       return;
     }
 
-    currentTeam.childTeamIds.forEach(deactivateTeam);
-    currentTeam.active = false;
-    currentTeam.removedAtTick = next.tick;
-    next.removedTeamIds.push(currentTeam.id);
-
-    const manager = next.people[currentTeam.managerId];
-    if (manager?.active) {
-      manager.active = false;
-      manager.removedAtTick = next.tick;
-      next.removedPeopleIds.push(manager.id);
-    }
-
-    currentTeam.engineerIds.forEach((engineerId) => {
-      const engineer = next.people[engineerId];
-      if (engineer?.active) {
-        engineer.active = false;
-        engineer.removedAtTick = next.tick;
-        engineer.teamId = currentTeam.id;
-        next.removedPeopleIds.push(engineer.id);
-      }
-    });
+    currentTeam.childTeamIds.forEach(collectTeam);
+    teamIdsToDelete.push(currentTeam.id);
   };
 
-  deactivateTeam(team.id);
-  addEvent(next, "remove-team", `${team.name} and its subtree were removed manually.`);
+  collectTeam(team.id);
+  teamIdsToDelete.forEach((currentTeamId) => {
+    const currentTeam = next.teams[currentTeamId];
+    if (!currentTeam) {
+      return;
+    }
+
+    delete next.people[currentTeam.managerId];
+    currentTeam.engineerIds.forEach((engineerId) => {
+      delete next.people[engineerId];
+    });
+    delete next.teams[currentTeam.id];
+  });
+
+  const deletedTeamIds = new Set(teamIdsToDelete);
+  next.removedTeamIds = next.removedTeamIds.filter((id) => !deletedTeamIds.has(id));
+  next.removedPeopleIds = next.removedPeopleIds.filter((id) => next.people[id]);
+  Object.values(next.teams).forEach((remainingTeam) => {
+    remainingTeam.childTeamIds = remainingTeam.childTeamIds.filter((id) => next.teams[id]);
+    remainingTeam.engineerIds = remainingTeam.engineerIds.filter((id) => next.people[id]);
+  });
+  addEvent(next, "scenario", `${team.name} and its subtree were deleted.`);
   return next;
 }
 

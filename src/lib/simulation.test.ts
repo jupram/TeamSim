@@ -165,7 +165,7 @@ describe("simulation scoring", () => {
     const engineerId = root.engineerIds[0];
     const next = removeEngineer(org, root.id, engineerId);
 
-    expect(next.people[engineerId].active).toBe(false);
+    expect(next.people[engineerId]).toBeUndefined();
     expect(next.teams[root.id].engineerIds).not.toContain(engineerId);
   });
 
@@ -177,9 +177,9 @@ describe("simulation scoring", () => {
     const childTeamId = team.childTeamIds[0];
 
     const next = removeTeamSubtree(org, teamId);
-    expect(next.teams[teamId].active).toBe(false);
-    expect(next.people[team.managerId].active).toBe(false);
-    expect(next.teams[childTeamId].active).toBe(false);
+    expect(next.teams[teamId]).toBeUndefined();
+    expect(next.people[team.managerId]).toBeUndefined();
+    expect(next.teams[childTeamId]).toBeUndefined();
     expect(next.teams[root.id].childTeamIds).not.toContain(teamId);
 
     const rootAttempt = removeTeamSubtree(next, root.id);

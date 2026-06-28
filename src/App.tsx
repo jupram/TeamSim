@@ -735,13 +735,41 @@ function createScenarioSnapshot(org: Organization): Organization {
   snapshot.tick = 0;
   snapshot.seedState = undefined;
   snapshot.eventLog = [];
+  snapshot.removedPeopleIds = [];
+  snapshot.removedTeamIds = [];
+
+  Object.values(snapshot.teams)
+    .filter((team) => !team.active)
+    .forEach((team) => {
+      delete snapshot.teams[team.id];
+      delete snapshot.people[team.managerId];
+    });
+
+  Object.values(snapshot.people)
+    .filter((person) => !person.active)
+    .forEach((person) => {
+      delete snapshot.people[person.id];
+    });
+
+  Object.values(snapshot.teams).forEach((team) => {
+    team.childTeamIds = team.childTeamIds.filter((teamId) => snapshot.teams[teamId]);
+    team.engineerIds = team.engineerIds.filter((personId) => snapshot.people[personId]);
+    if (team.parentTeamId && !snapshot.teams[team.parentTeamId]) {
+      team.parentTeamId = undefined;
+    }
+  });
+
   Object.values(snapshot.people).forEach((person) => {
+    person.active = true;
+    person.removedAtTick = undefined;
     person.negativeFitStreak = 0;
     person.negativeTeamStreak = 0;
     person.currentScore = undefined;
     person.scoreHistory = [];
   });
   Object.values(snapshot.teams).forEach((team) => {
+    team.active = true;
+    team.removedAtTick = undefined;
     team.teamScoreHistory = [];
   });
   return snapshot;
