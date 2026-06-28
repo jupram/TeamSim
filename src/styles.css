@@ -455,6 +455,37 @@ p {
   white-space: nowrap;
 }
 
+.member-title,
+.person-meta-line span,
+.field-label-line {
+  align-items: center;
+  display: inline-flex;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.member-title {
+  max-width: 100%;
+}
+
+.star-badge {
+  align-items: center;
+  background: #fff3c4;
+  border: 1px solid #e0bd52;
+  border-radius: 999px;
+  color: #a86d00;
+  display: inline-flex;
+  flex: 0 0 auto;
+  height: 18px;
+  justify-content: center;
+  width: 18px;
+}
+
+.star-badge svg {
+  fill: #f1b51c;
+  stroke-width: 2.4;
+}
+
 .tree-card small,
 .person-row small {
   color: #6c7870;

@@ -9,6 +9,7 @@ import {
   Plus,
   RotateCcw,
   SkipForward,
+  Star,
   Trash2,
   Upload,
   UserPlus,
@@ -30,10 +31,11 @@ import {
 import { createBalancedPreset, createFlatPreset, createFragilePreset, presets } from "./lib/presets";
 import { distributionOptions } from "./lib/random";
 import { shouldStopSimulation, stepSimulation } from "./lib/simulation";
-import { Organization } from "./lib/types";
+import { Organization, Person } from "./lib/types";
 
 type PresetKey = keyof typeof presets;
 type SelectedNodeKey = `team:${string}` | `person:${string}:${string}`;
+const STAR_MEMBER_MEAN = 80;
 
 const presetOptions: Array<{ id: PresetKey; label: string; create: () => Organization }> = [
   { id: "balanced", label: "Balanced", create: createBalancedPreset },
@@ -425,8 +427,13 @@ function TeamTree({
           <Building2 size={17} />
           <span>
             <strong>{team.name}</strong>
-            <small>
-              {manager.name} - {formatDistribution(manager.distribution.type)}
+            <small className="person-meta-line">
+              <span>
+                {manager.name}
+                {isStarMember(manager) && <StarBadge />}
+              </span>
+              {" - "}
+              {formatDistribution(manager.distribution.type)}
               {isCollapsed && reporteeCount > 0 ? ` - ${reporteeCount} hidden` : ""}
             </small>
           </span>
@@ -465,7 +472,10 @@ function TeamTree({
                     <button type="button" className="tree-card-main" onClick={() => onSelectPerson(team.id, engineer.id)}>
                       <UserRound size={16} />
                       <span>
-                        <strong>{engineer.name}</strong>
+                        <strong className="member-title">
+                          {engineer.name}
+                          {isStarMember(engineer) && <StarBadge />}
+                        </strong>
                         <small>
                           {formatDistribution(engineer.distribution.type)} - score {engineer.currentScore?.toFixed(1) ?? "-"} - streak{" "}
                           {engineer.negativeFitStreak}
@@ -546,7 +556,10 @@ function InlinePersonFields({
   return (
     <div className="node-fieldset">
       <label>
-        {label}
+        <span className="field-label-line">
+          {label}
+          {isStarMember(person) && <StarBadge />}
+        </span>
         <input value={person.name} onChange={(event) => onChange(updatePersonName(org, person.id, event.target.value))} />
       </label>
       <div className="inline-fields">
@@ -601,6 +614,7 @@ function SurvivalTable({ org }: { org: Organization }) {
         person.role === "manager"
           ? managedTeamByManagerId.get(person.id)
           : org.teams[person.teamId ?? ""]?.name ?? teamByEngineerId.get(person.id),
+      isStar: isStarMember(person),
       survived: person.removedAtTick ?? org.tick,
       active: person.active
     }))
@@ -611,6 +625,7 @@ function SurvivalTable({ org }: { org: Organization }) {
       id: team.id,
       name: team.name,
       kind: "Team",
+      isStar: false,
       survived: team.removedAtTick ?? org.tick,
       active: team.active
     }))
@@ -629,7 +644,7 @@ function SurvivalRows({
   rows
 }: {
   title: string;
-  rows: Array<{ id: string; name: string; kind: string; teamName?: string; survived: number; active: boolean }>;
+  rows: Array<{ id: string; name: string; kind: string; teamName?: string; isStar: boolean; survived: number; active: boolean }>;
 }) {
   return (
     <div className="survival-group">
@@ -638,7 +653,10 @@ function SurvivalRows({
         {rows.map((row) => (
           <div className="survival-row" key={row.id}>
             <span>
-              <strong>{row.name}</strong>
+              <strong className="member-title">
+                {row.name}
+                {row.isStar && <StarBadge />}
+              </strong>
               <small>{row.teamName ? `${row.kind} - ${row.teamName}` : row.kind}</small>
             </span>
             <span className={row.active ? "survival-badge active" : "survival-badge"}>
@@ -671,6 +689,18 @@ function MiniChart({ values }: { values: number[] }) {
     <svg className="mini-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Average score trend">
       <polyline points={points || `0,${height}`} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
+  );
+}
+
+function isStarMember(person: Person): boolean {
+  return person.distribution.mean >= STAR_MEMBER_MEAN;
+}
+
+function StarBadge() {
+  return (
+    <span className="star-badge" title={`Star member: mean ${STAR_MEMBER_MEAN}+`} aria-label="Star member">
+      <Star size={13} />
+    </span>
   );
 }
 
