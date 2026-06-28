@@ -1,3 +1,12 @@
+import type { Distribution, DistributionType } from "./types";
+
+export const distributionOptions: Array<{ type: DistributionType; label: string }> = [
+  { type: "normal", label: "Normal" },
+  { type: "uniform", label: "Uniform" },
+  { type: "exponential", label: "Exponential" },
+  { type: "lognormal", label: "Log-normal" }
+];
+
 export function hashSeed(seed: string): number {
   let hash = 2166136261;
   for (let index = 0; index < seed.length; index += 1) {
@@ -30,4 +39,33 @@ export function sampleNormal(mean: number, variance: number, random: () => numbe
   const u2 = random();
   const z0 = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
   return mean + z0 * Math.sqrt(safeVariance);
+}
+
+export function sampleDistribution(distribution: Distribution, random: () => number): number {
+  const mean = distribution.mean;
+  const variance = Math.max(0, distribution.variance);
+  if (variance === 0) {
+    return mean;
+  }
+
+  switch (distribution.type ?? "normal") {
+    case "uniform": {
+      const halfWidth = Math.sqrt(3 * variance);
+      return mean - halfWidth + random() * halfWidth * 2;
+    }
+    case "exponential": {
+      const scale = Math.sqrt(variance);
+      const shiftedOrigin = mean - scale;
+      return shiftedOrigin - scale * Math.log(Math.max(1 - random(), Number.EPSILON));
+    }
+    case "lognormal": {
+      const safeMean = Math.max(mean, Number.EPSILON);
+      const sigmaSquared = Math.log(1 + variance / (safeMean * safeMean));
+      const mu = Math.log(safeMean) - sigmaSquared / 2;
+      return Math.exp(sampleNormal(mu, sigmaSquared, random));
+    }
+    case "normal":
+    default:
+      return sampleNormal(mean, variance, random);
+  }
 }

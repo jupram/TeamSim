@@ -1,6 +1,8 @@
 import {
   Activity,
   Building2,
+  ChevronDown,
+  ChevronRight,
   Download,
   Pause,
   Play,
@@ -21,10 +23,12 @@ import {
   removeEngineer,
   removeTeamSubtree,
   updatePersonDistribution,
+  updatePersonDistributionType,
   updatePersonName,
   updateTeamName
 } from "./lib/org";
 import { createBalancedPreset, createFlatPreset, createFragilePreset, presets } from "./lib/presets";
+import { distributionOptions } from "./lib/random";
 import { shouldStopSimulation, stepSimulation } from "./lib/simulation";
 import { Organization } from "./lib/types";
 
@@ -42,6 +46,7 @@ export function App() {
   const [baseline, setBaseline] = useState<Organization>(() => createBalancedPreset());
   const [running, setRunning] = useState(false);
   const [selectedNodeKey, setSelectedNodeKey] = useState<SelectedNodeKey>(`team:${org.rootTeamId}`);
+  const [collapsedTeamIds, setCollapsedTeamIds] = useState<Set<string>>(() => new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const metrics = useMemo(() => calculateMetrics(org), [org]);
@@ -68,6 +73,7 @@ export function App() {
     setOrg(next);
     setBaseline(createScenarioSnapshot(next));
     setSelectedNodeKey(`team:${next.rootTeamId}`);
+    setCollapsedTeamIds(new Set());
   }
 
   function commitScenario(next: Organization, preferredNodeKey = selectedNodeKey) {
@@ -112,7 +118,28 @@ export function App() {
     setOrg(reset);
     setBaseline(createScenarioSnapshot(reset));
     setSelectedNodeKey(`team:${reset.rootTeamId}`);
+    setCollapsedTeamIds(new Set());
     event.target.value = "";
+  }
+
+  function toggleTeamCollapse(teamId: string) {
+    setCollapsedTeamIds((current) => {
+      const next = new Set(current);
+      if (next.has(teamId)) {
+        next.delete(teamId);
+      } else {
+        next.add(teamId);
+      }
+      return next;
+    });
+  }
+
+  function expandAllTeams() {
+    setCollapsedTeamIds(new Set());
+  }
+
+  function collapseAllTeams() {
+    setCollapsedTeamIds(new Set(Object.values(org.teams).filter((team) => team.engineerIds.length + team.childTeamIds.length > 0).map((team) => team.id)));
   }
 
   return (
@@ -121,8 +148,12 @@ export function App() {
         <div>
           <span className="eyebrow">TeamSim</span>
           <h1>Organization Fit Simulator</h1>
+          <p className="topbar-subtitle">Tune org structure, skill distributions, and fit thresholds, then watch teams evolve.</p>
         </div>
         <div className="topbar-actions">
+          <span className={running ? "status-chip running" : simulationStopped ? "status-chip stopped" : "status-chip"}>
+            {running ? "Running" : simulationStopped ? "Stopped" : "Ready"}
+          </span>
           <select
             aria-label="Load preset"
             onChange={(event) => {
@@ -161,12 +192,13 @@ export function App() {
             <SkipForward size={17} />
             Step
           </button>
-          <button
+            <button
             type="button"
             onClick={() => {
               setRunning(false);
               setOrg(cloneOrganization(baseline));
               setSelectedNodeKey(`team:${baseline.rootTeamId}`);
+              setCollapsedTeamIds(new Set());
             }}
           >
             <RotateCcw size={17} />
@@ -207,12 +239,12 @@ export function App() {
       </section>
 
       <section className="dashboard-grid">
-        <Metric label="Active people" value={metrics.activePeople} />
+        <Metric label="Active people" value={metrics.activePeople} tone="primary" />
         <Metric label="Managers" value={metrics.activeManagers} />
         <Metric label="Engineers" value={metrics.activeEngineers} />
-        <Metric label="Removed people" value={metrics.removedPeople} />
-        <Metric label="Removed teams" value={metrics.removedTeams} />
-        <Metric label="Latest team score" value={metrics.latestTeamScore} />
+        <Metric label="Removed people" value={metrics.removedPeople} tone="danger" />
+        <Metric label="Removed teams" value={metrics.removedTeams} tone="danger" />
+        <Metric label="Latest team score" value={metrics.latestTeamScore} tone={metrics.latestTeamScore < 0 ? "danger" : "primary"} />
       </section>
 
       <section className="workspace-grid">
@@ -222,19 +254,50 @@ export function App() {
               <h2>Org Tree</h2>
               <p>{org.name}</p>
             </div>
-            <Activity size={20} />
+            <div className="panel-actions">
+              <button type="button" title="Expand all teams" onClick={expandAllTeams}>
+                <ChevronDown size={15} />
+                Expand
+              </button>
+              <button type="button" title="Collapse all teams" onClick={collapseAllTeams}>
+                <ChevronRight size={15} />
+                Collapse
+              </button>
+              <Activity size={20} />
+            </div>
           </div>
           <TeamTree
             org={org}
             teamId={org.rootTeamId}
             selectedNodeKey={selectedNodeKey}
+            collapsedTeamIds={collapsedTeamIds}
             onSelectTeam={(teamId) => setSelectedNodeKey(`team:${teamId}`)}
             onSelectPerson={(teamId, personId) => setSelectedNodeKey(`person:${teamId}:${personId}`)}
             onChange={commitScenario}
-            onAddTeam={(teamId) => commitScenario(addChildTeam(org, teamId), `team:${teamId}`)}
-            onAddEngineer={(teamId) => commitScenario(addEngineer(org, teamId), `team:${teamId}`)}
+            onToggleCollapse={toggleTeamCollapse}
+            onAddTeam={(teamId) => {
+              setCollapsedTeamIds((current) => {
+                const next = new Set(current);
+                next.delete(teamId);
+                return next;
+              });
+              commitScenario(addChildTeam(org, teamId), `team:${teamId}`);
+            }}
+            onAddEngineer={(teamId) => {
+              setCollapsedTeamIds((current) => {
+                const next = new Set(current);
+                next.delete(teamId);
+                return next;
+              });
+              commitScenario(addEngineer(org, teamId), `team:${teamId}`);
+            }}
             onRemoveTeam={(teamId) => {
               const fallbackTeamId = org.teams[teamId]?.parentTeamId ?? org.rootTeamId;
+              setCollapsedTeamIds((current) => {
+                const next = new Set(current);
+                next.delete(teamId);
+                return next;
+              });
               commitScenario(removeTeamSubtree(org, teamId), `team:${fallbackTeamId}`);
             }}
             onRemoveEngineer={(teamId, engineerId) => commitScenario(removeEngineer(org, teamId, engineerId), `team:${teamId}`)}
@@ -262,6 +325,16 @@ export function App() {
           </div>
         </div>
 
+        <div className="panel survival-panel">
+          <div className="panel-header">
+            <div>
+              <h2>Survival</h2>
+              <p>Steps survived by members and teams</p>
+            </div>
+          </div>
+          <SurvivalTable org={org} />
+        </div>
+
         <div className="panel log-panel">
           <div className="panel-header">
             <div>
@@ -287,9 +360,9 @@ export function App() {
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
+function Metric({ label, value, tone = "neutral" }: { label: string; value: number; tone?: "neutral" | "primary" | "danger" }) {
   return (
-    <div className="metric">
+    <div className={`metric metric-${tone}`}>
       <span>{label}</span>
       <strong>{Number.isInteger(value) ? value : value.toFixed(1)}</strong>
     </div>
@@ -300,9 +373,11 @@ function TeamTree({
   org,
   teamId,
   selectedNodeKey,
+  collapsedTeamIds,
   onSelectTeam,
   onSelectPerson,
   onChange,
+  onToggleCollapse,
   onAddTeam,
   onAddEngineer,
   onRemoveTeam,
@@ -311,9 +386,11 @@ function TeamTree({
   org: Organization;
   teamId: string;
   selectedNodeKey: SelectedNodeKey;
+  collapsedTeamIds: Set<string>;
   onSelectTeam: (teamId: string) => void;
   onSelectPerson: (teamId: string, personId: string) => void;
   onChange: (org: Organization, preferredNodeKey?: SelectedNodeKey) => void;
+  onToggleCollapse: (teamId: string) => void;
   onAddTeam: (teamId: string) => void;
   onAddEngineer: (teamId: string) => void;
   onRemoveTeam: (teamId: string) => void;
@@ -327,20 +404,39 @@ function TeamTree({
   const isRoot = team.id === org.rootTeamId;
   const teamNodeKey: SelectedNodeKey = `team:${team.id}`;
   const teamSelected = selectedNodeKey === teamNodeKey;
+  const reporteeCount = team.engineerIds.length + team.childTeamIds.length;
+  const isCollapsed = collapsedTeamIds.has(team.id);
 
   return (
-    <div className={`tree-branch team-node ${team.active ? "" : "inactive"}`}>
+    <div className={`tree-branch team-node ${team.active ? "" : "inactive"} ${isCollapsed ? "collapsed" : ""}`}>
       <div className={teamSelected ? "selected tree-card team-card" : "tree-card team-card"}>
+        <button
+          type="button"
+          className="collapse-toggle"
+          title={isCollapsed ? "Expand team" : "Collapse team"}
+          aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${team.name}`}
+          aria-expanded={!isCollapsed}
+          disabled={reporteeCount === 0}
+          onClick={() => onToggleCollapse(team.id)}
+        >
+          {isCollapsed ? <ChevronRight size={15} /> : <ChevronDown size={15} />}
+        </button>
         <button type="button" className="tree-card-main" onClick={() => onSelectTeam(team.id)}>
           <Building2 size={17} />
           <span>
             <strong>{team.name}</strong>
-            <small>{manager.name}</small>
+            <small>
+              {manager.name} - {formatDistribution(manager.distribution.type)}
+              {isCollapsed && reporteeCount > 0 ? ` - ${reporteeCount} hidden` : ""}
+            </small>
           </span>
         </button>
-        <span className="node-stats">
-          {manager.currentScore?.toFixed(1) ?? "-"} / {team.teamScoreHistory.at(-1) ?? 0}
-        </span>
+        <div className="node-meta">
+          <span className="node-pill">score {manager.currentScore?.toFixed(1) ?? "-"}</span>
+          <span className={(team.teamScoreHistory.at(-1) ?? 0) < 0 ? "node-pill negative" : "node-pill"}>
+            team {team.teamScoreHistory.at(-1) ?? 0}
+          </span>
+        </div>
         <div className="node-actions" aria-label={`${team.name} actions`}>
           <button type="button" title="Add subteam" onClick={() => onAddTeam(team.id)}>
             <Plus size={15} />
@@ -356,51 +452,58 @@ function TeamTree({
         </div>
       </div>
       {teamSelected && <InlineTeamConfig org={org} teamId={team.id} onChange={(next) => onChange(next, teamNodeKey)} />}
-      <div className="tree-children reportees">
-        {team.engineerIds.map((engineerId) => {
-          const engineer = org.people[engineerId];
-          const personNodeKey: SelectedNodeKey = `person:${team.id}:${engineer.id}`;
-          const personSelected = selectedNodeKey === personNodeKey;
-          return (
-            <div className="person-node" key={engineerId}>
-              <div className={personSelected ? "selected tree-card person-row" : "tree-card person-row"}>
-                <button type="button" className="tree-card-main" onClick={() => onSelectPerson(team.id, engineer.id)}>
-                  <UserRound size={16} />
-                  <span>
-                    <strong>{engineer.name}</strong>
-                    <small>
-                      score {engineer.currentScore?.toFixed(1) ?? "-"} - streak {engineer.negativeFitStreak}
-                    </small>
-                  </span>
-                </button>
-                <button type="button" className="danger-icon" title="Remove engineer" onClick={() => onRemoveEngineer(team.id, engineer.id)}>
-                  <Trash2 size={15} />
-                </button>
-              </div>
-              {personSelected && (
-                <InlinePersonConfig org={org} personId={engineer.id} onChange={(next) => onChange(next, personNodeKey)} />
-              )}
-            </div>
-          );
-        })}
-      </div>
-      <div className="tree-children child-teams">
-        {team.childTeamIds.map((childId) => (
-          <TeamTree
-            org={org}
-            teamId={childId}
-            selectedNodeKey={selectedNodeKey}
-            onSelectTeam={onSelectTeam}
-            onSelectPerson={onSelectPerson}
-            onChange={onChange}
-            onAddTeam={onAddTeam}
-            onAddEngineer={onAddEngineer}
-            onRemoveTeam={onRemoveTeam}
-            onRemoveEngineer={onRemoveEngineer}
-            key={childId}
-          />
-        ))}
-      </div>
+      {!isCollapsed && (
+        <>
+          <div className="tree-children reportees">
+            {team.engineerIds.map((engineerId) => {
+              const engineer = org.people[engineerId];
+              const personNodeKey: SelectedNodeKey = `person:${team.id}:${engineer.id}`;
+              const personSelected = selectedNodeKey === personNodeKey;
+              return (
+                <div className="person-node" key={engineerId}>
+                  <div className={personSelected ? "selected tree-card person-row" : "tree-card person-row"}>
+                    <button type="button" className="tree-card-main" onClick={() => onSelectPerson(team.id, engineer.id)}>
+                      <UserRound size={16} />
+                      <span>
+                        <strong>{engineer.name}</strong>
+                        <small>
+                          {formatDistribution(engineer.distribution.type)} - score {engineer.currentScore?.toFixed(1) ?? "-"} - streak{" "}
+                          {engineer.negativeFitStreak}
+                        </small>
+                      </span>
+                    </button>
+                    <button type="button" className="danger-icon" title="Remove engineer" onClick={() => onRemoveEngineer(team.id, engineer.id)}>
+                      <Trash2 size={15} />
+                    </button>
+                  </div>
+                  {personSelected && (
+                    <InlinePersonConfig org={org} personId={engineer.id} onChange={(next) => onChange(next, personNodeKey)} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="tree-children child-teams">
+            {team.childTeamIds.map((childId) => (
+              <TeamTree
+                org={org}
+                teamId={childId}
+                selectedNodeKey={selectedNodeKey}
+                collapsedTeamIds={collapsedTeamIds}
+                onSelectTeam={onSelectTeam}
+                onSelectPerson={onSelectPerson}
+                onChange={onChange}
+                onToggleCollapse={onToggleCollapse}
+                onAddTeam={onAddTeam}
+                onAddEngineer={onAddEngineer}
+                onRemoveTeam={onRemoveTeam}
+                onRemoveEngineer={onRemoveEngineer}
+                key={childId}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -448,6 +551,19 @@ function InlinePersonFields({
       </label>
       <div className="inline-fields">
         <label>
+          Distribution
+          <select
+            value={person.distribution.type ?? "normal"}
+            onChange={(event) => onChange(updatePersonDistributionType(org, person.id, event.target.value as typeof person.distribution.type))}
+          >
+            {distributionOptions.map((option) => (
+              <option value={option.type} key={option.type}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
           Mean
           <input
             type="number"
@@ -464,6 +580,64 @@ function InlinePersonFields({
             onChange={(event) => onChange(updatePersonDistribution(org, person.id, "variance", Number(event.target.value)))}
           />
         </label>
+      </div>
+    </div>
+  );
+}
+
+function SurvivalTable({ org }: { org: Organization }) {
+  const peopleRows = Object.values(org.people)
+    .map((person) => ({
+      id: person.id,
+      name: person.name,
+      kind: person.role === "manager" ? "Manager" : "Engineer",
+      survived: person.removedAtTick ?? org.tick,
+      active: person.active
+    }))
+    .sort((left, right) => right.survived - left.survived || left.name.localeCompare(right.name));
+
+  const teamRows = Object.values(org.teams)
+    .map((team) => ({
+      id: team.id,
+      name: team.name,
+      kind: "Team",
+      survived: team.removedAtTick ?? org.tick,
+      active: team.active
+    }))
+    .sort((left, right) => right.survived - left.survived || left.name.localeCompare(right.name));
+
+  return (
+    <div className="survival-section">
+      <SurvivalRows title="Members" rows={peopleRows} />
+      <SurvivalRows title="Teams" rows={teamRows} />
+    </div>
+  );
+}
+
+function SurvivalRows({
+  title,
+  rows
+}: {
+  title: string;
+  rows: Array<{ id: string; name: string; kind: string; survived: number; active: boolean }>;
+}) {
+  return (
+    <div className="survival-group">
+      <h3>{title}</h3>
+      <div className="survival-list">
+        {rows.map((row) => (
+          <div className="survival-row" key={row.id}>
+            <span>
+              <strong>{row.name}</strong>
+              <small>{row.kind}</small>
+            </span>
+            <span className={row.active ? "survival-badge active" : "survival-badge"}>
+              {row.survived}
+              {row.active ? "+" : ""}
+            </span>
+            <small className={row.active ? "survival-status active" : "survival-status"}>{row.active ? "active" : "removed"}</small>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -516,6 +690,10 @@ function createScenarioSnapshot(org: Organization): Organization {
     team.teamScoreHistory = [];
   });
   return snapshot;
+}
+
+function formatDistribution(type = "normal"): string {
+  return distributionOptions.find((option) => option.type === type)?.label ?? "Normal";
 }
 
 function resolveSelectedNodeKey(org: Organization, preferredNodeKey: SelectedNodeKey): SelectedNodeKey {

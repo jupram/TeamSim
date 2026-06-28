@@ -12,7 +12,7 @@ export function createPerson(name: string, role: Person["role"], mean: number, v
     id: makeId(role === "manager" ? "mgr" : "eng"),
     name,
     role,
-    distribution: { mean, variance },
+    distribution: { type: "normal", mean, variance },
     active: true,
     negativeFitStreak: 0,
     negativeTeamStreak: 0,
@@ -128,6 +128,7 @@ export function removeEngineer(org: Organization, teamId: string, engineerId: st
     return next;
   }
   engineer.active = false;
+  engineer.removedAtTick = next.tick;
   next.removedPeopleIds.push(engineerId);
   team.engineerIds = team.engineerIds.filter((id) => id !== engineerId);
   addEvent(next, "remove-person", `${engineer.name} was removed from ${team.name}.`);
@@ -160,6 +161,7 @@ export function removeTeamSubtree(org: Organization, teamId: string): Organizati
     const manager = next.people[currentTeam.managerId];
     if (manager?.active) {
       manager.active = false;
+      manager.removedAtTick = next.tick;
       next.removedPeopleIds.push(manager.id);
     }
 
@@ -167,6 +169,7 @@ export function removeTeamSubtree(org: Organization, teamId: string): Organizati
       const engineer = next.people[engineerId];
       if (engineer?.active) {
         engineer.active = false;
+        engineer.removedAtTick = next.tick;
         next.removedPeopleIds.push(engineer.id);
       }
     });
@@ -189,6 +192,16 @@ export function updatePersonDistribution(
     return next;
   }
   person.distribution[field] = Number.isFinite(value) ? value : person.distribution[field];
+  return next;
+}
+
+export function updatePersonDistributionType(org: Organization, personId: string, type: Person["distribution"]["type"]): Organization {
+  const next = cloneOrganization(org);
+  const person = next.people[personId];
+  if (!person) {
+    return next;
+  }
+  person.distribution.type = type;
   return next;
 }
 

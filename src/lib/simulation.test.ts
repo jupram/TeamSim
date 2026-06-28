@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { removeEngineer, removeTeamSubtree } from "./org";
 import { createBalancedPreset, createFlatPreset } from "./presets";
-import { createSeededRandom, sampleNormal } from "./random";
+import { createSeededRandom, sampleDistribution, sampleNormal } from "./random";
 import { isNear, shouldStopSimulation, stepSimulation } from "./simulation";
 import { Organization } from "./types";
 
@@ -24,6 +24,20 @@ describe("random helpers", () => {
     const valuesB = [sampleNormal(10, 4, second), sampleNormal(10, 4, second)];
     expect(valuesA).toEqual(valuesB);
   });
+
+  it("samples alternate distribution families deterministically", () => {
+    const first = createSeededRandom("families");
+    const second = createSeededRandom("families");
+    const distributions = [
+      { type: "uniform" as const, mean: 50, variance: 25 },
+      { type: "exponential" as const, mean: 50, variance: 25 },
+      { type: "lognormal" as const, mean: 50, variance: 25 }
+    ];
+
+    expect(distributions.map((distribution) => sampleDistribution(distribution, first))).toEqual(
+      distributions.map((distribution) => sampleDistribution(distribution, second))
+    );
+  });
 });
 
 describe("simulation scoring", () => {
@@ -43,6 +57,7 @@ describe("simulation scoring", () => {
     expect(org.people[engineerId].active).toBe(true);
     org = stepSimulation(org);
     expect(org.people[engineerId].active).toBe(false);
+    expect(org.people[engineerId].removedAtTick).toBe(3);
   });
 
   it("resets a reportee poor-fit streak after a positive comparison", () => {

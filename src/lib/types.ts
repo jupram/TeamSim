@@ -1,6 +1,8 @@
 export type Role = "manager" | "engineer";
+export type DistributionType = "normal" | "uniform" | "exponential" | "lognormal";
 
 export interface Distribution {
+  type: DistributionType;
   mean: number;
   variance: number;
 }
@@ -11,6 +13,7 @@ export interface Person {
   role: Role;
   distribution: Distribution;
   active: boolean;
+  removedAtTick?: number;
   negativeFitStreak: number;
   negativeTeamStreak: number;
   currentScore?: number;

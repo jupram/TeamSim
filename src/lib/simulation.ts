@@ -1,5 +1,5 @@
 import { activePeople, addEvent, cloneOrganization, getActiveTeamsDeepestFirst, getTeamReporteeIds } from "./org";
-import { hashSeed, nextSeedState, sampleNormal } from "./random";
+import { hashSeed, nextSeedState, sampleDistribution } from "./random";
 import { Organization, Team } from "./types";
 
 export function isNear(managerScore: number, reporteeScore: number, threshold: number): boolean {
@@ -23,7 +23,7 @@ function sampleScores(org: Organization): void {
   Object.values(org.people)
     .filter((person) => person.active)
     .forEach((person) => {
-      const score = sampleNormal(person.distribution.mean, person.distribution.variance, () => drawRandom(org));
+      const score = sampleDistribution(person.distribution, () => drawRandom(org));
       person.currentScore = Number(score.toFixed(2));
       person.scoreHistory.push(person.currentScore);
     });
@@ -36,6 +36,7 @@ function removeReportee(org: Organization, team: Team, personId: string): void {
   }
   if (person.role === "engineer") {
     person.active = false;
+    person.removedAtTick = org.tick;
     team.engineerIds = team.engineerIds.filter((id) => id !== personId);
     org.removedPeopleIds.push(personId);
     addEvent(org, "remove-person", `${person.name} was removed from ${team.name} after repeated poor fit.`);
@@ -58,6 +59,7 @@ function removeManagerTeam(org: Organization, team: Team, reason: string): void 
   }
 
   manager.active = false;
+  manager.removedAtTick = org.tick;
   team.active = false;
   team.removedAtTick = org.tick;
   parent.childTeamIds = parent.childTeamIds.filter((id) => id !== team.id);
@@ -189,6 +191,7 @@ export function resetSimulation(org: Organization): Organization {
   next.removedTeamIds = [];
   Object.values(next.people).forEach((person) => {
     person.active = true;
+    person.removedAtTick = undefined;
     person.negativeFitStreak = 0;
     person.negativeTeamStreak = 0;
     person.currentScore = undefined;
