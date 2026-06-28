@@ -316,7 +316,7 @@ p {
 }
 
 .tree-branch::before {
-  background: #c7d5cd;
+  background: var(--team-line, #c7d5cd);
   bottom: 0;
   content: "";
   left: 0;
@@ -327,7 +327,7 @@ p {
 
 .tree-branch::after,
 .tree-card::before {
-  background: #c7d5cd;
+  background: var(--team-line, #c7d5cd);
   content: "";
   height: 2px;
   left: -1.05rem;
@@ -391,7 +391,34 @@ p {
 }
 
 .team-card {
-  background: linear-gradient(180deg, #ffffff, #f9fbfa);
+  background: linear-gradient(180deg, #ffffff 0%, var(--team-soft, #f9fbfa) 100%);
+  border-color: var(--team-border, #d5e0da);
+  box-shadow:
+    inset 4px 0 0 var(--team-accent, #176c53),
+    0 8px 18px rgba(29, 45, 36, 0.04);
+}
+
+.team-card.selected {
+  background: linear-gradient(180deg, #ffffff 0%, var(--team-soft, #f7fbf9) 100%);
+  border-color: var(--team-accent, #176c53);
+  box-shadow:
+    inset 4px 0 0 var(--team-accent, #176c53),
+    0 10px 24px var(--team-glow, rgba(23, 108, 83, 0.14));
+}
+
+.team-card.selected::after {
+  background: var(--team-accent, #176c53);
+  box-shadow: 0 0 0 4px var(--team-glow, rgba(23, 108, 83, 0.12));
+}
+
+.team-card .tree-card-main svg {
+  color: var(--team-accent, #176c53);
+}
+
+.team-card .node-pill:not(.negative) {
+  background: var(--team-soft, #eef3ef);
+  border-color: var(--team-border, #d8e2dc);
+  color: var(--team-accent, #176c53);
 }
 
 .tree-card-main {
@@ -466,6 +493,11 @@ p {
 
 .member-title {
   max-width: 100%;
+}
+
+.manager-name {
+  color: #2f3b34;
+  font-weight: 800;
 }
 
 .star-badge {

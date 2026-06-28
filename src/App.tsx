@@ -15,7 +15,7 @@ import {
   UserPlus,
   UserRound
 } from "lucide-react";
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, useEffect, useMemo, useRef, useState } from "react";
 import {
   addChildTeam,
   addEngineer,
@@ -36,6 +36,20 @@ import { Organization, Person } from "./lib/types";
 type PresetKey = keyof typeof presets;
 type SelectedNodeKey = `team:${string}` | `person:${string}:${string}`;
 const STAR_MEMBER_MEAN = 80;
+const TEAM_PALETTE = [
+  { accent: "#176c53", soft: "#edf8f3", border: "#a8d8c6", line: "#6ab596" },
+  { accent: "#2f6fb0", soft: "#eef5fc", border: "#afd0ee", line: "#6fa6d8" },
+  { accent: "#9a5f10", soft: "#fff6e8", border: "#e6c58f", line: "#d49a45" },
+  { accent: "#9e3f54", soft: "#fff0f3", border: "#e4b6c0", line: "#c96f82" },
+  { accent: "#6651a8", soft: "#f3f0ff", border: "#c9bdea", line: "#9381cf" },
+  { accent: "#0f7b8f", soft: "#ebf8fb", border: "#a8d9e2", line: "#5fb7c6" },
+  { accent: "#875a32", soft: "#f8f2ec", border: "#d7b994", line: "#b98a58" },
+  { accent: "#4f6b2f", soft: "#f0f7ea", border: "#bcd7a1", line: "#85ad5d" },
+  { accent: "#8d4a88", soft: "#fbf0fa", border: "#d8b2d5", line: "#b36dab" },
+  { accent: "#3f6470", soft: "#edf5f7", border: "#aecbd3", line: "#789faa" },
+  { accent: "#a1462a", soft: "#fff1ec", border: "#e4b49f", line: "#c97959" },
+  { accent: "#3c5f9f", soft: "#eef3ff", border: "#b7c8eb", line: "#7897d2" }
+];
 
 const presetOptions: Array<{ id: PresetKey; label: string; create: () => Organization }> = [
   { id: "balanced", label: "Balanced", create: createBalancedPreset },
@@ -408,9 +422,10 @@ function TeamTree({
   const teamSelected = selectedNodeKey === teamNodeKey;
   const reporteeCount = team.engineerIds.length + team.childTeamIds.length;
   const isCollapsed = collapsedTeamIds.has(team.id);
+  const teamColorStyle = getTeamColorStyle(org, team.id);
 
   return (
-    <div className={`tree-branch team-node ${team.active ? "" : "inactive"} ${isCollapsed ? "collapsed" : ""}`}>
+    <div className={`tree-branch team-node ${team.active ? "" : "inactive"} ${isCollapsed ? "collapsed" : ""}`} style={teamColorStyle}>
       <div className={teamSelected ? "selected tree-card team-card" : "tree-card team-card"}>
         <button
           type="button"
@@ -429,7 +444,7 @@ function TeamTree({
             <strong>{team.name}</strong>
             <small className="person-meta-line">
               <span>
-                {manager.name}
+                <strong className="manager-name">{manager.name}</strong>
                 {isStarMember(manager) && <StarBadge />}
               </span>
               {" - "}
@@ -730,6 +745,18 @@ function createScenarioSnapshot(org: Organization): Organization {
     team.teamScoreHistory = [];
   });
   return snapshot;
+}
+
+function getTeamColorStyle(org: Organization, teamId: string): CSSProperties {
+  const teamIndex = Math.max(0, Object.keys(org.teams).indexOf(teamId));
+  const color = TEAM_PALETTE[teamIndex % TEAM_PALETTE.length];
+  return {
+    "--team-accent": color.accent,
+    "--team-soft": color.soft,
+    "--team-border": color.border,
+    "--team-line": color.line,
+    "--team-glow": `${color.accent}24`
+  } as CSSProperties;
 }
 
 function formatDistribution(type = "normal"): string {

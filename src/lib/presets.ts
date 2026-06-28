@@ -2,7 +2,7 @@ import { createPerson, makeId } from "./org";
 import { Organization, Team } from "./types";
 
 function createBaseOrg(name: string, seed: string, rootMean = 55): Organization {
-  const rootManager = createPerson("Avery CEO", "manager", rootMean, 16);
+  const rootManager = createPerson("Avery", "manager", rootMean, 16);
   const rootTeam: Team = {
     id: makeId("team"),
     name: "Executive Team",
@@ -72,12 +72,12 @@ export function createBalancedPreset(): Organization {
   const org = createBaseOrg("Balanced Product Org", "balanced-42", 76);
   const root = org.teams[org.rootTeamId];
 
-  const platform = addManagedTeam(org, root, "Platform", "Blair Platform VP", 74, 25);
-  const product = addManagedTeam(org, root, "Product Engineering", "Casey Product VP", 80, 25);
-  const infra = addManagedTeam(org, platform, "Infrastructure", "Devon Infra Manager", 72, 16);
-  const data = addManagedTeam(org, platform, "Data Systems", "Elliot Data Manager", 78, 16);
-  const web = addManagedTeam(org, product, "Web App", "Finley Web Manager", 82, 20);
-  const mobile = addManagedTeam(org, product, "Mobile", "Gray Mobile Manager", 79, 20);
+  const platform = addManagedTeam(org, root, "Platform", "Blair", 74, 25);
+  const product = addManagedTeam(org, root, "Product Engineering", "Casey", 80, 25);
+  const infra = addManagedTeam(org, platform, "Infrastructure", "Devon", 72, 16);
+  const data = addManagedTeam(org, platform, "Data Systems", "Elliot", 78, 16);
+  const web = addManagedTeam(org, product, "Web App", "Finley", 82, 20);
+  const mobile = addManagedTeam(org, product, "Mobile", "Gray", 79, 20);
 
   [
     [infra, "Ira", 70],
@@ -93,7 +93,7 @@ export function createBalancedPreset(): Organization {
     [mobile, "Sawyer", 81],
     [mobile, "Taylor", 74]
   ].forEach(([team, name, mean]) => {
-    addEngineer(org, team as Team, `${name} Engineer`, mean as number, 36);
+    addEngineer(org, team as Team, name as string, mean as number, 36);
   });
 
   return org;
@@ -103,10 +103,10 @@ export function createFragilePreset(): Organization {
   const org = createBaseOrg("Fragile Reorg Lab", "fragile-17");
   org.settings.threshold = 5;
   const root = org.teams[org.rootTeamId];
-  const alpha = addManagedTeam(org, root, "Alpha", "Alex Alpha VP", 70, 9);
-  const beta = addManagedTeam(org, root, "Beta", "Bailey Beta VP", 35, 9);
-  const alphaLeaf = addManagedTeam(org, alpha, "Alpha Delivery", "Cam Alpha Manager", 42, 16);
-  const betaLeaf = addManagedTeam(org, beta, "Beta Delivery", "Drew Beta Manager", 64, 16);
+  const alpha = addManagedTeam(org, root, "Alpha", "Alex", 70, 9);
+  const beta = addManagedTeam(org, root, "Beta", "Bailey", 35, 9);
+  const alphaLeaf = addManagedTeam(org, alpha, "Alpha Delivery", "Cam", 42, 16);
+  const betaLeaf = addManagedTeam(org, beta, "Beta Delivery", "Drew", 64, 16);
 
   [
     [alphaLeaf, "Emery", 82],
@@ -116,7 +116,7 @@ export function createFragilePreset(): Organization {
     [betaLeaf, "Jules", 63],
     [betaLeaf, "Kendall", 31]
   ].forEach(([team, name, mean]) => {
-    addEngineer(org, team as Team, `${name} Engineer`, mean as number, 25);
+    addEngineer(org, team as Team, name as string, mean as number, 25);
   });
 
   return org;
@@ -127,7 +127,7 @@ export function createFlatPreset(): Organization {
   const root = org.teams[org.rootTeamId];
   ["Ari", "Bryn", "Cleo", "Dana", "Ezra", "Flynn", "Gale", "Hayden"].forEach((name, index) => {
     const mean = name === "Ezra" ? 80 : name === "Gale" ? 84 : 45 + index * 2;
-    addEngineer(org, root, `${name} Engineer`, mean, 49);
+    addEngineer(org, root, name, mean, 49);
   });
   return org;
 }

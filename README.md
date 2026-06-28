@@ -21,6 +21,8 @@ Useful questions TeamSim can explore include:
 ## Current Capabilities
 
 - Interactive org tree with nested teams, managers, and engineers.
+- Color-coded team nodes with matching connector lines, icons, selection states, and score chips.
+- Bold manager names inside each team node for faster scanning.
 - Inline editing for team names, person names, distribution type, mean, and variance.
 - Add and remove teams or engineers directly from the tree.
 - Collapse and expand individual teams or the full org tree.
@@ -62,6 +64,8 @@ The same mean and variance can behave differently across distribution families, 
 - `Balanced Product Org`: a nested product and platform organization with generally aligned managers and engineers.
 - `Fragile Reorg Lab`: a smaller hierarchy designed to expose mismatched teams and faster removals.
 - `Flat Startup`: a single-level team where all engineers report to the root manager.
+
+Preset member names are intentionally short display names such as `Devon`, `Ira`, and `Ari`; role and team context is shown separately in the interface.
 
 ## Project Structure
 
