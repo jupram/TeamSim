@@ -37,6 +37,7 @@ function removeReportee(org: Organization, team: Team, personId: string): void {
   if (person.role === "engineer") {
     person.active = false;
     person.removedAtTick = org.tick;
+    person.teamId = team.id;
     team.engineerIds = team.engineerIds.filter((id) => id !== personId);
     org.removedPeopleIds.push(personId);
     addEvent(org, "remove-person", `${person.name} was removed from ${team.name} after repeated poor fit.`);
@@ -76,6 +77,7 @@ function removeManagerTeam(org: Organization, team: Team, reason: string): void 
 
   const promotedEngineers = team.engineerIds.filter((id) => org.people[id]?.active);
   promotedEngineers.forEach((engineerId) => {
+    org.people[engineerId].teamId = parent.id;
     if (!parent.engineerIds.includes(engineerId)) {
       parent.engineerIds.push(engineerId);
     }
@@ -127,10 +129,8 @@ export function stepSimulation(org: Organization): Organization {
       teamScore += delta;
 
       if (near) {
-        manager.negativeFitStreak = 0;
         reportee.negativeFitStreak = 0;
       } else {
-        manager.negativeFitStreak += 1;
         reportee.negativeFitStreak += 1;
       }
 

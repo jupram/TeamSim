@@ -58,6 +58,7 @@ describe("simulation scoring", () => {
     org = stepSimulation(org);
     expect(org.people[engineerId].active).toBe(false);
     expect(org.people[engineerId].removedAtTick).toBe(3);
+    expect(org.people[engineerId].teamId).toBe(root.id);
   });
 
   it("resets a reportee poor-fit streak after a positive comparison", () => {
@@ -70,6 +71,27 @@ describe("simulation scoring", () => {
     org.people[engineerId].distribution.mean = 10;
     org = stepSimulation(org);
     expect(org.people[engineerId].negativeFitStreak).toBe(0);
+  });
+
+  it("does not count a manager's misses with reportees toward their upward poor-fit streak", () => {
+    let org = createBalancedPreset();
+    org.settings.threshold = 1;
+    org.settings.removalStreak = 3;
+    Object.values(org.people).forEach((person) => {
+      person.distribution.variance = 0;
+      person.distribution.mean = 0;
+    });
+
+    const root = org.teams[org.rootTeamId];
+    const platform = org.teams[root.childTeamIds.find((teamId) => org.teams[teamId].name === "Platform")!];
+    org.people[platform.managerId].distribution.mean = 100;
+
+    org = stepSimulation(org);
+
+    expect(org.teams[platform.id].active).toBe(true);
+    expect(org.people[platform.managerId].active).toBe(true);
+    expect(org.people[platform.managerId].negativeFitStreak).toBe(1);
+    expect(org.people[platform.managerId].negativeTeamStreak).toBe(1);
   });
 
   it("removes a manager after three consecutive negative team sums", () => {
@@ -97,6 +119,7 @@ describe("simulation scoring", () => {
     expect(org.teams[leafTeam.id].active).toBe(false);
     promotedEngineerIds.forEach((engineerId) => {
       expect(org.teams[parentId].engineerIds).toContain(engineerId);
+      expect(org.people[engineerId].teamId).toBe(parentId);
     });
   });
 
@@ -104,6 +127,7 @@ describe("simulation scoring", () => {
     let org = forceScores(createBalancedPreset(), 10, 50);
     const nestedTeam = Object.values(org.teams).find((team) => team.parentTeamId && team.childTeamIds.length > 0)!;
     const childTeamIds = [...nestedTeam.childTeamIds];
+    const promotedEngineerIds = childTeamIds.flatMap((childTeamId) => org.teams[childTeamId].engineerIds);
     const parentId = nestedTeam.parentTeamId!;
     org.people[nestedTeam.managerId].distribution.mean = 10;
     childTeamIds.forEach((childTeamId) => {
@@ -116,7 +140,10 @@ describe("simulation scoring", () => {
 
     expect(org.teams[nestedTeam.id].active).toBe(false);
     childTeamIds.forEach((childTeamId) => {
-      expect(org.teams[childTeamId].parentTeamId).toBe(parentId);
+      expect(org.teams[childTeamId].active).toBe(false);
+    });
+    promotedEngineerIds.forEach((engineerId) => {
+      expect(org.teams[parentId].engineerIds).toContain(engineerId);
     });
   });
 

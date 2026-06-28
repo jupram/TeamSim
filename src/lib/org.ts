@@ -90,6 +90,7 @@ export function addEngineer(org: Organization, teamId: string, name?: string): O
     return next;
   }
   const engineer = createPerson(name ?? `Engineer ${Object.keys(next.people).length}`, "engineer", 50, 36);
+  engineer.teamId = team.id;
   next.people[engineer.id] = engineer;
   team.engineerIds.push(engineer.id);
   addEvent(next, "scenario", `Added ${engineer.name} to ${team.name}.`);
@@ -129,6 +130,7 @@ export function removeEngineer(org: Organization, teamId: string, engineerId: st
   }
   engineer.active = false;
   engineer.removedAtTick = next.tick;
+  engineer.teamId = team.id;
   next.removedPeopleIds.push(engineerId);
   team.engineerIds = team.engineerIds.filter((id) => id !== engineerId);
   addEvent(next, "remove-person", `${engineer.name} was removed from ${team.name}.`);
@@ -170,6 +172,7 @@ export function removeTeamSubtree(org: Organization, teamId: string): Organizati
       if (engineer?.active) {
         engineer.active = false;
         engineer.removedAtTick = next.tick;
+        engineer.teamId = currentTeam.id;
         next.removedPeopleIds.push(engineer.id);
       }
     });

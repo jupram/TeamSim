@@ -21,7 +21,7 @@ function createBaseOrg(name: string, seed: string): Organization {
     settings: {
       threshold: 8,
       removalStreak: 3,
-      tickSpeedMs: 900,
+      tickSpeedMs: 200,
       seed
     },
     people: {
@@ -63,6 +63,7 @@ function addManagedTeam(
 
 function addEngineer(org: Organization, team: Team, name: string, mean: number, variance: number): void {
   const engineer = createPerson(name, "engineer", mean, variance);
+  engineer.teamId = team.id;
   org.people[engineer.id] = engineer;
   team.engineerIds.push(engineer.id);
 }

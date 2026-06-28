@@ -11,6 +11,7 @@ export interface Person {
   id: string;
   name: string;
   role: Role;
+  teamId?: string;
   distribution: Distribution;
   active: boolean;
   removedAtTick?: number;

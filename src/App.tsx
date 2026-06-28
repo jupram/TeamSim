@@ -314,7 +314,7 @@ export function App() {
           <MiniChart values={trendValues} />
           <div className="score-table">
             {Object.values(org.teams)
-              .filter((team) => team.active)
+              .filter((team) => team.active && team.id !== org.rootTeamId)
               .slice(0, 8)
               .map((team) => (
                 <div className="score-row" key={team.id}>
@@ -586,11 +586,21 @@ function InlinePersonFields({
 }
 
 function SurvivalTable({ org }: { org: Organization }) {
+  const managedTeamByManagerId = new Map(Object.values(org.teams).map((team) => [team.managerId, team.name]));
+  const teamByEngineerId = new Map<string, string>();
+  Object.values(org.teams).forEach((team) => {
+    team.engineerIds.forEach((engineerId) => teamByEngineerId.set(engineerId, team.name));
+  });
+
   const peopleRows = Object.values(org.people)
     .map((person) => ({
       id: person.id,
       name: person.name,
       kind: person.role === "manager" ? "Manager" : "Engineer",
+      teamName:
+        person.role === "manager"
+          ? managedTeamByManagerId.get(person.id)
+          : org.teams[person.teamId ?? ""]?.name ?? teamByEngineerId.get(person.id),
       survived: person.removedAtTick ?? org.tick,
       active: person.active
     }))
@@ -619,7 +629,7 @@ function SurvivalRows({
   rows
 }: {
   title: string;
-  rows: Array<{ id: string; name: string; kind: string; survived: number; active: boolean }>;
+  rows: Array<{ id: string; name: string; kind: string; teamName?: string; survived: number; active: boolean }>;
 }) {
   return (
     <div className="survival-group">
@@ -629,7 +639,7 @@ function SurvivalRows({
           <div className="survival-row" key={row.id}>
             <span>
               <strong>{row.name}</strong>
-              <small>{row.kind}</small>
+              <small>{row.teamName ? `${row.kind} - ${row.teamName}` : row.kind}</small>
             </span>
             <span className={row.active ? "survival-badge active" : "survival-badge"}>
               {row.survived}
