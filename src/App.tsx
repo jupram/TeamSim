@@ -208,7 +208,7 @@ export function App() {
             <SkipForward size={17} />
             Step
           </button>
-            <button
+          <button
             type="button"
             onClick={() => {
               setRunning(false);

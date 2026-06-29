@@ -119,6 +119,10 @@ Run a production build:
 npm.cmd run build
 ```
 
+## License
+
+TeamSim is dual-licensed. Non-commercial use is allowed under the terms in [LICENSE.md](LICENSE.md). Selling the software, selling access to it, hosting it as a paid service, including it in a commercial product, or otherwise commercially exploiting it requires a separate written Commercial License from the copyright holder.
+
 ## Notes
 
 TeamSim is intentionally simplified. The sampled scores are abstract signals, not real measures of human value or job performance. Use the simulator to compare assumptions and structural dynamics, not to evaluate real people.
