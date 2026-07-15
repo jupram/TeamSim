@@ -3,7 +3,10 @@ import {
   Building2,
   ChevronDown,
   ChevronRight,
+  Code2,
   Download,
+  Gauge,
+  Layers3,
   Pause,
   Play,
   Plus,
@@ -12,10 +15,13 @@ import {
   Star,
   Trash2,
   Upload,
+  UserCog,
+  UserMinus,
   UserPlus,
-  UserRound
+  UserRound,
+  Users
 } from "lucide-react";
-import { ChangeEvent, CSSProperties, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, CSSProperties, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import {
   addChildTeam,
   addEngineer,
@@ -161,13 +167,19 @@ export function App() {
   return (
     <main className="app-shell">
       <section className="topbar">
-        <div>
-          <span className="eyebrow">TeamSim</span>
-          <h1>Organization Fit Simulator</h1>
-          <p className="topbar-subtitle">Tune org structure, skill distributions, and fit thresholds, then watch teams evolve.</p>
+        <div className="brand-lockup">
+          <span className="brand-mark" aria-hidden="true">
+            <Activity size={22} />
+          </span>
+          <div>
+            <span className="eyebrow">TeamSim</span>
+            <h1>Organization Fit Simulator</h1>
+            <p className="topbar-subtitle">Tune org structure, skill distributions, and fit thresholds, then watch teams evolve.</p>
+          </div>
         </div>
         <div className="topbar-actions">
           <span className={running ? "status-chip running" : simulationStopped ? "status-chip stopped" : "status-chip"}>
+            <span className="status-dot" aria-hidden="true" />
             {running ? "Running" : simulationStopped ? "Stopped" : "Ready"}
           </span>
           <select
@@ -255,12 +267,17 @@ export function App() {
       </section>
 
       <section className="dashboard-grid">
-        <Metric label="Active people" value={metrics.activePeople} tone="primary" />
-        <Metric label="Managers" value={metrics.activeManagers} />
-        <Metric label="Engineers" value={metrics.activeEngineers} />
-        <Metric label="Removed people" value={metrics.removedPeople} tone="danger" />
-        <Metric label="Removed teams" value={metrics.removedTeams} tone="danger" />
-        <Metric label="Latest team score" value={metrics.latestTeamScore} tone={metrics.latestTeamScore < 0 ? "danger" : "primary"} />
+        <Metric icon={<Users size={17} />} label="Active people" value={metrics.activePeople} tone="primary" />
+        <Metric icon={<UserCog size={17} />} label="Managers" value={metrics.activeManagers} />
+        <Metric icon={<Code2 size={17} />} label="Engineers" value={metrics.activeEngineers} />
+        <Metric icon={<UserMinus size={17} />} label="Removed people" value={metrics.removedPeople} tone="danger" />
+        <Metric icon={<Layers3 size={17} />} label="Removed teams" value={metrics.removedTeams} tone="danger" />
+        <Metric
+          icon={<Gauge size={17} />}
+          label="Latest team score"
+          value={metrics.latestTeamScore}
+          tone={metrics.latestTeamScore < 0 ? "danger" : "primary"}
+        />
       </section>
 
       <section className="workspace-grid">
@@ -376,11 +393,24 @@ export function App() {
   );
 }
 
-function Metric({ label, value, tone = "neutral" }: { label: string; value: number; tone?: "neutral" | "primary" | "danger" }) {
+function Metric({
+  icon,
+  label,
+  value,
+  tone = "neutral"
+}: {
+  icon: ReactNode;
+  label: string;
+  value: number;
+  tone?: "neutral" | "primary" | "danger";
+}) {
   return (
     <div className={`metric metric-${tone}`}>
-      <span>{label}</span>
-      <strong>{Number.isInteger(value) ? value : value.toFixed(1)}</strong>
+      <span className="metric-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="metric-label">{label}</span>
+      <strong className="metric-value">{Number.isInteger(value) ? value : value.toFixed(1)}</strong>
     </div>
   );
 }
@@ -687,6 +717,18 @@ function SurvivalRows({
 }
 
 function MiniChart({ values }: { values: number[] }) {
+  if (values.length === 0) {
+    return (
+      <div className="chart-empty">
+        <span className="chart-empty-icon" aria-hidden="true">
+          <Activity size={22} />
+        </span>
+        <strong>No score history yet</strong>
+        <small>Run a step to begin tracking team health.</small>
+      </div>
+    );
+  }
+
   const width = 420;
   const height = 140;
   const min = Math.min(...values, 0);
@@ -702,7 +744,17 @@ function MiniChart({ values }: { values: number[] }) {
 
   return (
     <svg className="mini-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="Average score trend">
-      <polyline points={points || `0,${height}`} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <defs>
+        <linearGradient id="score-area" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="currentColor" stopOpacity="0.2" />
+          <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <line className="chart-grid-line" x1="0" y1="35" x2={width} y2="35" />
+      <line className="chart-grid-line" x1="0" y1="70" x2={width} y2="70" />
+      <line className="chart-grid-line" x1="0" y1="105" x2={width} y2="105" />
+      {values.length > 1 && <polygon points={`0,${height} ${points} ${width},${height}`} fill="url(#score-area)" />}
+      <polyline points={points} fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
