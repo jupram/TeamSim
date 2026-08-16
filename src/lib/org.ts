@@ -24,6 +24,50 @@ export function cloneOrganization(org: Organization): Organization {
   return structuredClone(org) as Organization;
 }
 
+export function createScenarioSnapshot(org: Organization): Organization {
+  const snapshot = cloneOrganization(org);
+  snapshot.tick = 0;
+  snapshot.seedState = undefined;
+  snapshot.eventLog = [];
+  snapshot.removedPeopleIds = [];
+  snapshot.removedTeamIds = [];
+
+  Object.values(snapshot.teams)
+    .filter((team) => !team.active)
+    .forEach((team) => {
+      delete snapshot.teams[team.id];
+      delete snapshot.people[team.managerId];
+    });
+
+  Object.values(snapshot.people)
+    .filter((person) => !person.active)
+    .forEach((person) => {
+      delete snapshot.people[person.id];
+    });
+
+  Object.values(snapshot.teams).forEach((team) => {
+    team.childTeamIds = team.childTeamIds.filter((teamId) => snapshot.teams[teamId]);
+    team.engineerIds = team.engineerIds.filter((personId) => snapshot.people[personId]);
+    if (team.parentTeamId && !snapshot.teams[team.parentTeamId]) {
+      team.parentTeamId = undefined;
+    }
+    team.active = true;
+    team.removedAtTick = undefined;
+    team.teamScoreHistory = [];
+  });
+
+  Object.values(snapshot.people).forEach((person) => {
+    person.active = true;
+    person.removedAtTick = undefined;
+    person.negativeFitStreak = 0;
+    person.negativeTeamStreak = 0;
+    person.currentScore = undefined;
+    person.scoreHistory = [];
+  });
+
+  return snapshot;
+}
+
 export function activePeople(org: Organization): Person[] {
   return Object.values(org.people).filter((person) => person.active);
 }
@@ -66,9 +110,10 @@ export function calculateMetrics(org: Organization): OrgMetrics {
   const latestScores = active
     .map((person) => person.currentScore)
     .filter((score): score is number => typeof score === "number");
-  const latestTeamScore = Object.values(org.teams)
-    .filter((team) => team.active)
-    .reduce((sum, team) => sum + (team.teamScoreHistory.at(-1) ?? 0), 0);
+  const activeTeams = Object.values(org.teams).filter((team) => team.active && team.teamScoreHistory.length > 0);
+  const latestTeamScore = activeTeams.length
+    ? activeTeams.reduce((sum, team) => sum + (team.teamScoreHistory.at(-1) ?? 0), 0) / activeTeams.length
+    : 0;
 
   return {
     activePeople: active.length,
@@ -76,7 +121,7 @@ export function calculateMetrics(org: Organization): OrgMetrics {
     activeEngineers: active.filter((person) => person.role === "engineer").length,
     removedPeople: people.filter((person) => !person.active).length,
     removedTeams: Object.values(org.teams).filter((team) => !team.active).length,
-    latestTeamScore,
+    latestTeamScore: Number(latestTeamScore.toFixed(1)),
     averageLatestScore: latestScores.length
       ? latestScores.reduce((sum, score) => sum + score, 0) / latestScores.length
       : 0
@@ -213,6 +258,12 @@ export function updateTeamName(org: Organization, teamId: string, name: string):
   if (next.teams[teamId]) {
     next.teams[teamId].name = name;
   }
+  return next;
+}
+
+export function updateOrganizationName(org: Organization, name: string): Organization {
+  const next = cloneOrganization(org);
+  next.name = name;
   return next;
 }
 

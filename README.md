@@ -1,39 +1,50 @@
 # TeamSim
 
-TeamSim is a browser-based organization fit simulator. It lets you model nested teams, assign managers and engineers configurable skill-score distributions, then run a deterministic simulation to see how manager/reportee fit can affect team health over time.
+TeamSim is a privacy-first organization scenario studio for HR, people operations, and executive teams. It lets leaders design reporting structures, compare a named proposal with an immutable reference scenario, examine repeated simulation outcomes, and export a decision brief that records both model evidence and human judgment.
 
 The app is built with React 19, TypeScript, Vite 6, Vitest, and Lucide icons.
 
 ## Why This Project Is Important
 
-Teams are complex systems. A single hire, manager change, reporting-line shift, or mismatch in expectations can affect more than one person. TeamSim makes those dynamics visible in a lightweight, interactive way.
+Organization changes are usually debated in slides and spreadsheets that show the proposed structure but not its assumptions, uncertainty, or downstream effects. A manager change, reporting-line shift, or altered span of control can affect several teams at once. TeamSim makes those dependencies visible before a difficult-to-reverse decision is made.
 
-This project is important because it helps people experiment with organization design before treating structure as fixed. It shows how local manager/reportee fit, variance in individual performance, repeated negative outcomes, and team hierarchy can combine into larger organizational effects. It is not a prediction engine or HR decision tool; it is a sandbox for thinking, teaching, and comparing scenarios.
+For HR teams, it provides a consistent workspace for testing structures and documenting assumptions. For executives, it converts a complex proposal into a compact comparison with continuity, structural load, uncertainty, sensitive teams, mitigations, and a recorded decision status. Repeatable seed portfolios make reviews easier to reproduce than a single favorable simulation run.
+
+TeamSim remains a synthetic decision-support model. It does not measure human value or predict individual performance, and it must not automate hiring, promotion, compensation, discipline, or termination decisions.
 
 Useful questions TeamSim can explore include:
 
 - How fragile is a team when manager and reportee score distributions are far apart?
 - What changes when an organization is flat, balanced, or deeply nested?
-- How does a stricter fit threshold change removals and promotions?
-- Which teams survive longer under the same random seed?
-- How do high-mean "star" members affect visible team health?
+- How does a stricter fit threshold change modeled continuity and transitions?
+- Which teams are most sensitive across the same portfolio of random seeds?
+- Does a proposal improve continuity enough to justify its additional layers or reporting span?
 
 ## Current Capabilities
 
-- Interactive org tree with nested teams, managers, and engineers.
+- Three-stage workflow: **Design**, **Analyze**, and **Decide**.
+- Named reference and proposal scenarios, with an explicit action for replacing the reference.
+- Interactive org tree with nested teams, managers, and individual contributors.
 - Color-coded team nodes with matching connector lines, icons, selection states, and score chips.
 - Bold manager names inside each team node for faster scanning.
 - Inline editing for team names, person names, distribution type, mean, and variance.
 - Add and remove teams or engineers directly from the tree.
 - Collapse and expand individual teams or the full org tree.
-- Seeded random simulation for repeatable scenario runs.
+- Seeded random simulation for repeatable individual runs.
+- Multi-seed analysis across 24 matched runs, with a configurable 5-100 step horizon.
+- Reference-versus-proposal measures for role continuity, team continuity, disruption probability, management layers, average span, and modeled risk.
+- Normalized team fit, so teams of different sizes can be compared on the same percentage scale.
+- Outcome ranges, stability scoring, ranked findings, and practical mitigations.
+- Team outlook ordered by modeled sensitivity.
+- Decision status and notes for constraints that are outside the model.
+- Markdown decision-brief export with evidence, findings, team outlook, notes, and appropriate-use language.
 - Run, pause, single-step, and reset controls.
 - Configurable fit threshold, removal streak, tick speed, and random seed.
-- Health metrics for active people, managers, engineers, removed people, removed teams, and latest team score.
-- Health trend chart showing the average sampled score among active people.
-- Survival panel showing how many ticks members and teams lasted.
+- Health metrics for active people, managers, engineers, scenario exits, team changes, and average team fit.
+- Scenario trend chart that preserves historical participants instead of rewriting history from only current members.
+- Continuity panel showing how many ticks members and teams lasted.
 - Event log for comparisons, removals, promotions, root-manager protection, and scenario edits.
-- JSON import/export for saving and reloading scenarios.
+- Versioned JSON import/export with legacy-file support, size limits, structural validation, reference checks, and hierarchy-cycle detection.
 - Preset scenarios for balanced, fragile, and flat organizations.
 
 ## How The Simulation Works
@@ -44,7 +55,7 @@ Useful questions TeamSim can explore include:
 4. Reportees build a poor-fit streak when they repeatedly miss the threshold.
 5. Engineers are removed after reaching the configured poor-fit streak.
 6. Managers can be removed when their team has repeated negative team-score sums or when they repeatedly miss upward against their own manager.
-7. When a manager/team is removed, active reportees are promoted to the skip manager.
+7. When a manager/team exits the modeled scenario, active reportees move to the next management level.
 8. The root manager is protected from removal so the simulation always keeps a top-level anchor.
 9. The simulation stops when only one active person remains.
 
@@ -72,12 +83,18 @@ Preset member names are intentionally short display names such as `Devon`, `Ira`
 ```text
 src/
   App.tsx                 Main React UI and interaction flow
+  components/
+    DecisionBrief.tsx     Scenario comparison and decision record
   main.tsx                App bootstrap
   styles.css              Application styles
   lib/
-    org.ts                Organization editing, metrics, and tree helpers
+    analysis.ts           Multi-run analysis, comparison, and brief export
+    analysis.test.ts      Analysis and decision-safeguard tests
+    org.ts                Organization editing, snapshots, metrics, and tree helpers
     presets.ts            Built-in scenario definitions
     random.ts             Seeded random generator and distribution sampling
+    scenario-file.ts      Versioned scenario export and import validation
+    scenario-file.test.ts Scenario file boundary tests
     simulation.ts         Tick-by-tick simulation rules
     simulation.test.ts    Unit tests for simulation and random behavior
     types.ts              Shared TypeScript models
@@ -119,10 +136,30 @@ Run a production build:
 npm.cmd run build
 ```
 
+## Appropriate Use
+
+TeamSim is intended for facilitated organization-design workshops, scenario exploration, and decision documentation. Use synthetic or appropriately governed data, challenge the configured assumptions, review outcome ranges instead of treating a single run as truth, and keep a human accountable for every real-world decision.
+
+Do not use TeamSim as an employee ranking system or as the sole basis for workforce action. The model intentionally does not ingest protected characteristics, performance reviews, compensation, health data, or other sensitive HR records.
+
+## Production Roadmap
+
+The local application now covers the core design-to-decision workflow. A production deployment for real organizations still requires platform capabilities that should not be simulated in browser-only code:
+
+- Enterprise identity with SSO, role-based access, tenant isolation, and least-privilege administration.
+- Encrypted server-side storage, retention controls, deletion workflows, backups, and regional data residency.
+- Governed HRIS connectors with field mapping, consent, data-minimization, and synchronization controls.
+- Durable scenario history, comments, approvals, ownership, and an append-only audit trail.
+- Portfolio dashboards for comparing multiple proposals, business units, costs, and implementation milestones.
+- Accessibility, security, privacy, employment-law, and model-risk reviews before processing real workforce data.
+- Monitoring, support, incident response, and documented service-level objectives.
+
+These items require a backend, authentication model, security architecture, and organizational policy decisions. They are deliberately outside the current local prototype rather than represented as incomplete client-side controls.
+
 ## License
 
 TeamSim is dual-licensed. Non-commercial use is allowed under the terms in [LICENSE.md](LICENSE.md). Selling the software, selling access to it, hosting it as a paid service, including it in a commercial product, or otherwise commercially exploiting it requires a separate written Commercial License from the copyright holder.
 
 ## Notes
 
-TeamSim is intentionally simplified. The sampled scores are abstract signals, not real measures of human value or job performance. Use the simulator to compare assumptions and structural dynamics, not to evaluate real people.
+TeamSim is intentionally simplified. Sampled scores are abstract scenario inputs, not real measures of human value or job performance. The analysis is reproducible evidence about configured assumptions, not a forecast guarantee.

@@ -6,13 +6,16 @@ import {
   Code2,
   Download,
   Gauge,
+  GitCompareArrows,
   Layers3,
+  LayoutDashboard,
   Pause,
   Play,
   Plus,
   RotateCcw,
   SkipForward,
   Star,
+  ShieldCheck,
   Trash2,
   Upload,
   UserCog,
@@ -22,13 +25,17 @@ import {
   Users
 } from "lucide-react";
 import { ChangeEvent, CSSProperties, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { DecisionBrief } from "./components/DecisionBrief";
+import { buildDecisionBriefMarkdown, compareScenarios, DecisionStatus } from "./lib/analysis";
 import {
   addChildTeam,
   addEngineer,
   calculateMetrics,
   cloneOrganization,
+  createScenarioSnapshot,
   removeEngineer,
   removeTeamSubtree,
+  updateOrganizationName,
   updatePersonDistribution,
   updatePersonDistributionType,
   updatePersonName,
@@ -36,12 +43,15 @@ import {
 } from "./lib/org";
 import { createBalancedPreset, createFlatPreset, createFragilePreset, presets } from "./lib/presets";
 import { distributionOptions } from "./lib/random";
+import { createScenarioFile, validateScenarioFile } from "./lib/scenario-file";
 import { shouldStopSimulation, stepSimulation } from "./lib/simulation";
 import { Organization, Person } from "./lib/types";
 
 type PresetKey = keyof typeof presets;
 type SelectedNodeKey = `team:${string}` | `person:${string}:${string}`;
-const STAR_MEMBER_MEAN = 80;
+type WorkspaceView = "design" | "decision";
+const HIGH_ASSUMPTION_MEAN = 80;
+const FORECAST_RUNS = 24;
 const TEAM_PALETTE = [
   { accent: "#176c53", soft: "#edf8f3", border: "#a8d8c6", line: "#6ab596" },
   { accent: "#2f6fb0", soft: "#eef5fc", border: "#afd0ee", line: "#6fa6d8" },
@@ -65,8 +75,14 @@ const presetOptions: Array<{ id: PresetKey; label: string; create: () => Organiz
 
 export function App() {
   const [org, setOrg] = useState<Organization>(() => createBalancedPreset());
-  const [baseline, setBaseline] = useState<Organization>(() => createBalancedPreset());
+  const [baseline, setBaseline] = useState<Organization>(() => createScenarioSnapshot(org));
+  const [referenceScenario, setReferenceScenario] = useState<Organization>(() => createScenarioSnapshot(org));
   const [running, setRunning] = useState(false);
+  const [workspaceView, setWorkspaceView] = useState<WorkspaceView>("design");
+  const [forecastHorizon, setForecastHorizon] = useState(20);
+  const [decisionStatus, setDecisionStatus] = useState<DecisionStatus>("Exploring");
+  const [decisionNotes, setDecisionNotes] = useState("");
+  const [importErrors, setImportErrors] = useState<string[]>([]);
   const [selectedNodeKey, setSelectedNodeKey] = useState<SelectedNodeKey>(`team:${org.rootTeamId}`);
   const [collapsedTeamIds, setCollapsedTeamIds] = useState<Set<string>>(() => new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -74,6 +90,10 @@ export function App() {
   const metrics = useMemo(() => calculateMetrics(org), [org]);
   const simulationStopped = shouldStopSimulation(org);
   const trendValues = activeScoreTrend(org);
+  const comparison = useMemo(
+    () => compareScenarios(referenceScenario, baseline, { horizon: forecastHorizon, runs: FORECAST_RUNS }),
+    [referenceScenario, baseline, forecastHorizon]
+  );
 
   useEffect(() => {
     if (!running) {
@@ -93,9 +113,14 @@ export function App() {
     const next = create();
     setRunning(false);
     setOrg(next);
-    setBaseline(createScenarioSnapshot(next));
+    const snapshot = createScenarioSnapshot(next);
+    setBaseline(snapshot);
+    setReferenceScenario(cloneOrganization(snapshot));
     setSelectedNodeKey(`team:${next.rootTeamId}`);
     setCollapsedTeamIds(new Set());
+    setDecisionStatus("Exploring");
+    setDecisionNotes("");
+    setImportErrors([]);
   }
 
   function commitScenario(next: Organization, preferredNodeKey = selectedNodeKey) {
@@ -119,7 +144,7 @@ export function App() {
   }
 
   function exportScenario() {
-    const data = JSON.stringify(createScenarioSnapshot(org), null, 2);
+    const data = JSON.stringify(createScenarioFile(createScenarioSnapshot(baseline)), null, 2);
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -134,14 +159,48 @@ export function App() {
     if (!file) {
       return;
     }
-    const imported = JSON.parse(await file.text()) as Organization;
-    const reset = createScenarioSnapshot(imported);
-    setRunning(false);
-    setOrg(reset);
-    setBaseline(createScenarioSnapshot(reset));
-    setSelectedNodeKey(`team:${reset.rootTeamId}`);
-    setCollapsedTeamIds(new Set());
-    event.target.value = "";
+    try {
+      if (file.size > 5_000_000) {
+        setImportErrors(["Scenario files must be smaller than 5 MB."]);
+        return;
+      }
+      const validation = validateScenarioFile(JSON.parse(await file.text()) as unknown);
+      if (!validation.ok) {
+        setImportErrors(validation.errors);
+        return;
+      }
+      const reset = createScenarioSnapshot(validation.organization);
+      setRunning(false);
+      setOrg(reset);
+      setBaseline(createScenarioSnapshot(reset));
+      setReferenceScenario(createScenarioSnapshot(reset));
+      setSelectedNodeKey(`team:${reset.rootTeamId}`);
+      setCollapsedTeamIds(new Set());
+      setDecisionStatus("Exploring");
+      setDecisionNotes("");
+      setImportErrors([]);
+    } catch {
+      setImportErrors(["The selected file is not valid JSON."]);
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function setCurrentAsReference() {
+    const snapshot = createScenarioSnapshot(baseline);
+    setReferenceScenario(snapshot);
+    setDecisionStatus("Exploring");
+  }
+
+  function exportDecisionBrief() {
+    const content = buildDecisionBriefMarkdown(comparison, decisionStatus, decisionNotes);
+    const blob = new Blob([content], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${baseline.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "scenario"}-decision-brief.md`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   function toggleTeamCollapse(teamId: string) {
@@ -173,8 +232,8 @@ export function App() {
           </span>
           <div>
             <span className="eyebrow">TeamSim</span>
-            <h1>Organization Fit Simulator</h1>
-            <p className="topbar-subtitle">Tune org structure, skill distributions, and fit thresholds, then watch teams evolve.</p>
+            <h1>Organization Scenario Studio</h1>
+            <p className="topbar-subtitle">Design, compare, and document organization change before decisions are made.</p>
           </div>
         </div>
         <div className="topbar-actions">
@@ -209,6 +268,78 @@ export function App() {
           <input ref={fileInputRef} className="hidden-input" type="file" accept="application/json" onChange={importScenario} />
         </div>
       </section>
+
+      <section className="scenario-toolbar">
+        <div className="workspace-tabs" role="tablist" aria-label="Workspace view">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={workspaceView === "design"}
+            className={workspaceView === "design" ? "active" : ""}
+            onClick={() => setWorkspaceView("design")}
+          >
+            <LayoutDashboard size={16} />
+            Design
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={workspaceView === "decision"}
+            className={workspaceView === "decision" ? "active" : ""}
+            onClick={() => setWorkspaceView("decision")}
+          >
+            <GitCompareArrows size={16} />
+            Analyze &amp; decide
+          </button>
+        </div>
+        <div className="scenario-route" aria-label="Scenario comparison route">
+          <span className="scenario-label">
+            <small>Reference</small>
+            <strong>{referenceScenario.name}</strong>
+          </span>
+          <ChevronRight size={16} aria-hidden="true" />
+          <label className="proposal-name-field">
+            Proposal
+            <input
+              aria-label="Proposal name"
+              value={baseline.name}
+              onChange={(event) => commitScenario(updateOrganizationName(baseline, event.target.value))}
+            />
+          </label>
+          <label className="horizon-field">
+            Forecast steps
+            <input
+              type="number"
+              min="5"
+              max="100"
+              value={forecastHorizon}
+              onChange={(event) => setForecastHorizon(Math.min(100, Math.max(5, Number(event.target.value) || 5)))}
+            />
+          </label>
+          <button type="button" onClick={setCurrentAsReference} title="Use the current proposal as the new comparison reference">
+            <ShieldCheck size={16} />
+            Set reference
+          </button>
+        </div>
+      </section>
+
+      <aside className="appropriate-use-strip">
+        <ShieldCheck size={17} aria-hidden="true" />
+        <span><strong>Local synthetic scenario.</strong> Use for organization-design workshops, not automated employment decisions.</span>
+      </aside>
+
+      {importErrors.length > 0 && (
+        <div className="import-error" role="alert">
+          <strong>Scenario import failed</strong>
+          <span>{importErrors.join(" ")}</span>
+          <button type="button" aria-label="Dismiss import error" onClick={() => setImportErrors([])}>
+            &times;
+          </button>
+        </div>
+      )}
+
+      {workspaceView === "design" ? (
+        <>
 
       <section className="control-strip">
         <div className="control-group">
@@ -270,11 +401,11 @@ export function App() {
         <Metric icon={<Users size={17} />} label="Active people" value={metrics.activePeople} tone="primary" />
         <Metric icon={<UserCog size={17} />} label="Managers" value={metrics.activeManagers} />
         <Metric icon={<Code2 size={17} />} label="Engineers" value={metrics.activeEngineers} />
-        <Metric icon={<UserMinus size={17} />} label="Removed people" value={metrics.removedPeople} tone="danger" />
-        <Metric icon={<Layers3 size={17} />} label="Removed teams" value={metrics.removedTeams} tone="danger" />
+        <Metric icon={<UserMinus size={17} />} label="Scenario exits" value={metrics.removedPeople} tone="danger" />
+        <Metric icon={<Layers3 size={17} />} label="Team changes" value={metrics.removedTeams} tone="danger" />
         <Metric
           icon={<Gauge size={17} />}
-          label="Latest team score"
+          label="Average team fit"
           value={metrics.latestTeamScore}
           tone={metrics.latestTeamScore < 0 ? "danger" : "primary"}
         />
@@ -340,8 +471,8 @@ export function App() {
         <div className="panel health-panel">
           <div className="panel-header">
             <div>
-              <h2>Health Trends</h2>
-              <p>Average active sampled score</p>
+              <h2>Scenario Trend</h2>
+              <p>Average sampled score at each step</p>
             </div>
           </div>
           <MiniChart values={trendValues} />
@@ -361,8 +492,8 @@ export function App() {
         <div className="panel survival-panel">
           <div className="panel-header">
             <div>
-              <h2>Survival</h2>
-              <p>Steps survived by members and teams</p>
+              <h2>Continuity</h2>
+              <p>Steps retained in this scenario run</p>
             </div>
           </div>
           <SurvivalTable org={org} />
@@ -389,6 +520,17 @@ export function App() {
           </ol>
         </div>
       </section>
+        </>
+      ) : (
+        <DecisionBrief
+          comparison={comparison}
+          status={decisionStatus}
+          notes={decisionNotes}
+          onStatusChange={setDecisionStatus}
+          onNotesChange={setDecisionNotes}
+          onExport={exportDecisionBrief}
+        />
+      )}
     </main>
   );
 }
@@ -760,71 +902,30 @@ function MiniChart({ values }: { values: number[] }) {
 }
 
 function isStarMember(person: Person): boolean {
-  return person.distribution.mean >= STAR_MEMBER_MEAN;
+  return person.distribution.mean >= HIGH_ASSUMPTION_MEAN;
 }
 
 function StarBadge() {
   return (
-    <span className="star-badge" title={`Star member: mean ${STAR_MEMBER_MEAN}+`} aria-label="Star member">
+    <span
+      className="star-badge"
+      title={`High configured assumption: mean ${HIGH_ASSUMPTION_MEAN}+`}
+      aria-label="High configured assumption"
+    >
       <Star size={13} />
     </span>
   );
 }
 
 function activeScoreTrend(org: Organization): number[] {
-  const active = Object.values(org.people).filter((person) => person.active);
-  const maxLength = Math.max(0, ...active.map((person) => person.scoreHistory.length));
+  const people = Object.values(org.people);
+  const maxLength = Math.max(0, ...people.map((person) => person.scoreHistory.length));
   return Array.from({ length: maxLength }).map((_, index) => {
-    const scores = active
+    const scores = people
       .map((person) => person.scoreHistory[index])
       .filter((score): score is number => typeof score === "number");
     return scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
   });
-}
-
-function createScenarioSnapshot(org: Organization): Organization {
-  const snapshot = cloneOrganization(org);
-  snapshot.tick = 0;
-  snapshot.seedState = undefined;
-  snapshot.eventLog = [];
-  snapshot.removedPeopleIds = [];
-  snapshot.removedTeamIds = [];
-
-  Object.values(snapshot.teams)
-    .filter((team) => !team.active)
-    .forEach((team) => {
-      delete snapshot.teams[team.id];
-      delete snapshot.people[team.managerId];
-    });
-
-  Object.values(snapshot.people)
-    .filter((person) => !person.active)
-    .forEach((person) => {
-      delete snapshot.people[person.id];
-    });
-
-  Object.values(snapshot.teams).forEach((team) => {
-    team.childTeamIds = team.childTeamIds.filter((teamId) => snapshot.teams[teamId]);
-    team.engineerIds = team.engineerIds.filter((personId) => snapshot.people[personId]);
-    if (team.parentTeamId && !snapshot.teams[team.parentTeamId]) {
-      team.parentTeamId = undefined;
-    }
-  });
-
-  Object.values(snapshot.people).forEach((person) => {
-    person.active = true;
-    person.removedAtTick = undefined;
-    person.negativeFitStreak = 0;
-    person.negativeTeamStreak = 0;
-    person.currentScore = undefined;
-    person.scoreHistory = [];
-  });
-  Object.values(snapshot.teams).forEach((team) => {
-    team.active = true;
-    team.removedAtTick = undefined;
-    team.teamScoreHistory = [];
-  });
-  return snapshot;
 }
 
 function getTeamColorStyle(org: Organization, teamId: string): CSSProperties {

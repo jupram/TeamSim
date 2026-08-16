@@ -152,7 +152,8 @@ export function stepSimulation(org: Organization): Organization {
       }
     });
 
-    team.teamScoreHistory.push(teamScore);
+    const normalizedTeamScore = reporteeIds.length ? Number(((teamScore / reporteeIds.length) * 100).toFixed(1)) : 0;
+    team.teamScoreHistory.push(normalizedTeamScore);
     if (teamScore < 0) {
       manager.negativeTeamStreak += 1;
     } else {
