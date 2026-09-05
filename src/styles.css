@@ -1,6 +1,10 @@
 :root {
   color: #17211b;
   background: #f2f5f3;
+  --depth-outline: rgba(16, 39, 29, 0.1);
+  --depth-mid: 0 10px 22px rgba(18, 38, 29, 0.11);
+  --depth-far: 0 20px 48px rgba(18, 38, 29, 0.13);
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.92);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -21,8 +25,10 @@ body {
 
 body {
   background:
-    linear-gradient(180deg, rgba(220, 233, 226, 0.48) 0, rgba(242, 245, 243, 0) 260px),
+    linear-gradient(115deg, rgba(255, 255, 255, 0.72), transparent 42%),
+    linear-gradient(180deg, rgba(207, 224, 215, 0.7) 0, rgba(242, 245, 243, 0) 320px),
     #f2f5f3;
+  background-attachment: fixed;
 }
 
 button,
@@ -45,6 +51,10 @@ button {
   justify-content: center;
   min-height: 34px;
   padding: 0.42rem 0.64rem;
+  box-shadow:
+    var(--surface-highlight),
+    0 2px 0 #b9c7bf,
+    0 5px 12px rgba(31, 47, 39, 0.08);
   transition:
     background 140ms ease,
     border-color 140ms ease,
@@ -54,13 +64,18 @@ button {
 
 button:hover {
   border-color: #809086;
-  box-shadow: 0 6px 16px rgba(31, 47, 39, 0.09);
-  transform: translateY(-1px);
+  box-shadow:
+    var(--surface-highlight),
+    0 3px 0 #aebdb4,
+    0 9px 20px rgba(31, 47, 39, 0.13);
+  transform: translateY(-2px);
 }
 
 button:active:not(:disabled) {
-  box-shadow: none;
-  transform: translateY(0);
+  box-shadow:
+    inset 0 2px 5px rgba(20, 39, 30, 0.15),
+    0 1px 0 #b9c7bf;
+  transform: translateY(1px);
 }
 
 button:disabled {
@@ -69,22 +84,28 @@ button:disabled {
 }
 
 button.primary {
-  background: linear-gradient(180deg, #1d7b61, #17644f);
+  background: linear-gradient(180deg, #258a6d 0%, #17644f 62%, #12533f 100%);
   border-color: #17644f;
-  box-shadow: 0 10px 24px rgba(23, 108, 83, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 3px 0 #0e4837,
+    0 10px 24px rgba(23, 108, 83, 0.22);
   color: white;
 }
 
 input,
 select,
 textarea {
-  background: #fff;
+  background: linear-gradient(180deg, #eef3f0, #ffffff 42%);
   border: 1px solid #cbd6cf;
   border-radius: 6px;
   color: #17211b;
   min-height: 34px;
   padding: 0.4rem 0.5rem;
   width: 100%;
+  box-shadow:
+    inset 0 2px 5px rgba(29, 45, 36, 0.09),
+    0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 input:focus,
@@ -127,16 +148,21 @@ p {
   overflow-x: hidden;
   padding: 0.9rem;
   width: 100%;
+  perspective: 1800px;
+  perspective-origin: 50% 8%;
 }
 
 .topbar,
 .control-strip,
 .panel,
 .metric {
-  background: rgba(255, 255, 255, 0.94);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.99), rgba(245, 249, 247, 0.96));
   border: 1px solid #dce5df;
   border-radius: 8px;
-  box-shadow: 0 10px 28px rgba(29, 45, 36, 0.055);
+  box-shadow:
+    var(--surface-highlight),
+    0 1px 0 var(--depth-outline),
+    var(--depth-mid);
   max-width: 100%;
 }
 
@@ -144,7 +170,11 @@ p {
   align-items: center;
   background: linear-gradient(118deg, #12251e 0%, #1b3a2f 58%, #245341 100%);
   border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 16px 36px rgba(20, 43, 34, 0.2);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -10px 24px rgba(6, 25, 18, 0.18),
+    0 4px 0 #0c241b,
+    var(--depth-far);
   color: #f8fbf9;
   display: flex;
   justify-content: space-between;
@@ -153,6 +183,15 @@ p {
   overflow: hidden;
   padding: 1rem 1.15rem;
   position: relative;
+  transform: translateZ(10px);
+}
+
+.topbar::before {
+  background: linear-gradient(105deg, rgba(255, 255, 255, 0.11), transparent 38%);
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
 }
 
 .topbar::after {
@@ -188,6 +227,9 @@ p {
   height: 48px;
   justify-content: center;
   width: 48px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 8px 18px rgba(4, 20, 13, 0.24);
 }
 
 .eyebrow {
@@ -297,10 +339,13 @@ p {
 
 .scenario-toolbar {
   align-items: center;
-  background: #ffffff;
+  background: linear-gradient(150deg, #ffffff, #f3f7f5);
   border: 1px solid #dce5df;
   border-radius: 8px;
-  box-shadow: 0 10px 28px rgba(29, 45, 36, 0.055);
+  box-shadow:
+    var(--surface-highlight),
+    0 3px 0 #ced9d2,
+    var(--depth-mid);
   display: flex;
   gap: 0.8rem;
   justify-content: space-between;
@@ -308,12 +353,14 @@ p {
 }
 
 .workspace-tabs {
-  background: #edf2ef;
+  background: linear-gradient(180deg, #e1e8e4, #f3f6f4);
+  border: 1px solid #d2ddd6;
   border-radius: 7px;
   display: inline-flex;
   flex: 0 0 auto;
   gap: 0.2rem;
   padding: 0.2rem;
+  box-shadow: inset 0 2px 5px rgba(29, 45, 36, 0.12);
 }
 
 .workspace-tabs button {
@@ -324,9 +371,12 @@ p {
 }
 
 .workspace-tabs button.active {
-  background: #ffffff;
+  background: linear-gradient(180deg, #ffffff, #f7faf8);
   border-color: #cbd7d0;
-  box-shadow: 0 4px 10px rgba(29, 45, 36, 0.08);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 2px 0 #bccbc2,
+    0 5px 12px rgba(29, 45, 36, 0.12);
   color: #176c53;
 }
 
@@ -374,9 +424,12 @@ p {
 }
 
 .appropriate-use-strip {
-  background: #eef5f1;
+  background: linear-gradient(135deg, #f6fbf8, #e7f0eb);
   border: 1px solid #cfe0d7;
   color: #385047;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 2px 5px rgba(29, 45, 36, 0.08);
 }
 
 .import-error {
@@ -407,7 +460,10 @@ p {
 
 .control-strip:focus-within {
   border-color: #c2d7cb;
-  box-shadow: 0 12px 32px rgba(23, 108, 83, 0.08);
+  box-shadow:
+    var(--surface-highlight),
+    0 3px 0 #c3d2c9,
+    0 16px 34px rgba(23, 108, 83, 0.14);
 }
 
 .control-strip output {
@@ -418,6 +474,9 @@ p {
   display: flex;
   min-height: 34px;
   padding: 0.4rem 0.62rem;
+  box-shadow:
+    inset 0 3px 7px rgba(0, 0, 0, 0.36),
+    0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .seed-field {
@@ -444,8 +503,11 @@ p {
 
 .metric:hover {
   border-color: #c8d8ce;
-  box-shadow: 0 14px 30px rgba(29, 45, 36, 0.08);
-  transform: translateY(-1px);
+  box-shadow:
+    var(--surface-highlight),
+    0 4px 0 #cbd7d0,
+    0 18px 34px rgba(29, 45, 36, 0.14);
+  transform: translateY(-3px) rotateX(1deg);
 }
 
 .metric::before {
@@ -469,6 +531,9 @@ p {
   height: 34px;
   justify-content: center;
   width: 34px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 3px 7px rgba(29, 45, 36, 0.13);
 }
 
 .metric-label {
@@ -522,6 +587,18 @@ p {
 .panel {
   min-width: 0;
   padding: 0.82rem;
+  position: relative;
+}
+
+.panel::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.9), transparent);
+  content: "";
+  height: 1px;
+  left: 7%;
+  pointer-events: none;
+  position: absolute;
+  right: 7%;
+  top: 0;
 }
 
 .tree-panel {
@@ -639,13 +716,19 @@ p {
   min-height: 40px;
   padding: 0.28rem 0.38rem;
   position: relative;
-  box-shadow: 0 8px 18px rgba(29, 45, 36, 0.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 2px 0 rgba(174, 192, 181, 0.72),
+    0 7px 14px rgba(29, 45, 36, 0.08);
   transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
 .tree-card:hover {
-  box-shadow: 0 9px 22px rgba(29, 45, 36, 0.075);
-  transform: translateX(1px);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 3px 0 rgba(162, 184, 171, 0.78),
+    0 12px 24px rgba(29, 45, 36, 0.13);
+  transform: translate3d(2px, -2px, 4px);
 }
 
 .team-node.collapsed > .tree-card {
@@ -677,16 +760,20 @@ p {
   background: linear-gradient(180deg, #ffffff 0%, var(--team-soft, #f9fbfa) 100%);
   border-color: var(--team-border, #d5e0da);
   box-shadow:
+    inset 0 1px 0 #ffffff,
     inset 4px 0 0 var(--team-accent, #176c53),
-    0 8px 18px rgba(29, 45, 36, 0.04);
+    0 2px 0 var(--team-border, #d5e0da),
+    0 8px 18px rgba(29, 45, 36, 0.09);
 }
 
 .team-card.selected {
   background: linear-gradient(180deg, #ffffff 0%, var(--team-soft, #f7fbf9) 100%);
   border-color: var(--team-accent, #176c53);
   box-shadow:
+    inset 0 1px 0 #ffffff,
     inset 4px 0 0 var(--team-accent, #176c53),
-    0 10px 24px var(--team-glow, rgba(23, 108, 83, 0.14));
+    0 3px 0 var(--team-border, #d5e0da),
+    0 14px 28px var(--team-glow, rgba(23, 108, 83, 0.16));
 }
 
 .team-card.selected::after {
@@ -891,10 +978,13 @@ p {
 }
 
 .inline-config {
-  background: linear-gradient(180deg, #ffffff, #f4f8f6);
+  background: linear-gradient(145deg, #f9fbfa, #edf3f0);
   border: 1px solid #d6e1da;
   border-radius: 8px;
-  box-shadow: 0 12px 30px rgba(29, 45, 36, 0.08);
+  box-shadow:
+    inset 0 2px 7px rgba(29, 45, 36, 0.08),
+    inset 0 -1px 0 #ffffff,
+    0 5px 12px rgba(29, 45, 36, 0.09);
   display: grid;
   gap: 0.5rem;
   grid-template-columns: minmax(180px, 0.75fr) minmax(260px, 1.25fr);
@@ -936,6 +1026,9 @@ p {
   border: 1px solid #e0e8e3;
   border-radius: 8px;
   padding: 0.45rem;
+  box-shadow:
+    inset 0 3px 8px rgba(29, 45, 36, 0.09),
+    0 1px 0 #ffffff;
 }
 
 .chart-grid-line {
@@ -957,6 +1050,9 @@ p {
   height: 118px;
   justify-content: center;
   text-align: center;
+  box-shadow:
+    inset 0 3px 9px rgba(29, 45, 36, 0.08),
+    0 1px 0 #ffffff;
 }
 
 .chart-empty-icon {
@@ -997,6 +1093,9 @@ p {
   justify-content: space-between;
   padding: 0.42rem 0.55rem;
   transition: background 140ms ease, border-color 140ms ease;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 2px 4px rgba(29, 45, 36, 0.07);
 }
 
 .score-row:hover,
@@ -1038,6 +1137,9 @@ p {
   justify-content: space-between;
   min-height: 38px;
   padding: 0.34rem 0.48rem;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 2px 5px rgba(29, 45, 36, 0.08);
 }
 
 .survival-row span:first-child {
@@ -1104,6 +1206,9 @@ p {
   color: #2d372f;
   padding: 0.42rem 0.55rem;
   transition: background 140ms ease;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 2px 5px rgba(29, 45, 36, 0.07);
 }
 
 .event-log li:hover {
@@ -1130,7 +1235,7 @@ p {
 
 .recommendation-banner {
   align-items: center;
-  background: #17392e;
+  background: linear-gradient(145deg, #214b3d 0%, #17392e 52%, #0d2b21 100%);
   border: 1px solid #285647;
   border-radius: 8px;
   color: #f6faf8;
@@ -1138,15 +1243,21 @@ p {
   gap: 0.8rem;
   grid-template-columns: 42px minmax(0, 1fr) auto;
   padding: 0.95rem 1rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -9px 20px rgba(3, 20, 13, 0.18),
+    0 4px 0 #0a241a,
+    0 18px 34px rgba(18, 38, 29, 0.2);
+  transform: translateZ(8px);
 }
 
 .recommendation-banner.tone-medium {
-  background: #4f421d;
+  background: linear-gradient(145deg, #6d5c28, #4f421d 58%, #3b3011);
   border-color: #75652f;
 }
 
 .recommendation-banner.tone-high {
-  background: #612c2c;
+  background: linear-gradient(145deg, #7b3a3a, #612c2c 58%, #461d1d);
   border-color: #864747;
 }
 
@@ -1169,6 +1280,9 @@ p {
   height: 42px;
   justify-content: center;
   width: 42px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    0 5px 12px rgba(0, 0, 0, 0.22);
 }
 
 .section-kicker {
@@ -1206,16 +1320,31 @@ p {
   display: grid;
   gap: 0.55rem;
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  perspective: 1400px;
 }
 
 .comparison-metric {
-  background: #ffffff;
+  background: linear-gradient(145deg, #ffffff, #f2f7f4);
   border: 1px solid #dce5df;
   border-radius: 7px;
   display: grid;
   gap: 0.42rem;
   min-height: 112px;
   padding: 0.7rem;
+  box-shadow:
+    var(--surface-highlight),
+    0 3px 0 #cbd8d0,
+    0 10px 20px rgba(29, 45, 36, 0.1);
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.comparison-metric:hover {
+  border-color: #b9cec1;
+  box-shadow:
+    var(--surface-highlight),
+    0 4px 0 #bdcdc3,
+    0 17px 28px rgba(29, 45, 36, 0.14);
+  transform: translateY(-3px) rotateX(2deg);
 }
 
 .comparison-metric > span:first-child {
@@ -1279,6 +1408,11 @@ p {
   gap: 0.55rem;
   grid-template-columns: 70px minmax(0, 1fr);
   padding: 0.58rem 0.65rem;
+  background: linear-gradient(145deg, #ffffff, #f6f9f7);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 2px 0 #d6e0da,
+    0 6px 13px rgba(29, 45, 36, 0.07);
 }
 
 .finding-high {
@@ -1333,11 +1467,17 @@ p {
   font-size: 0.76rem;
   gap: 0.45rem;
   padding: 0.55rem;
+  box-shadow:
+    inset 0 2px 6px rgba(29, 45, 36, 0.07),
+    0 1px 0 #ffffff;
 }
 
 .team-outlook-table {
   display: grid;
   overflow-x: auto;
+  border: 1px solid #dde6e1;
+  border-radius: 7px;
+  box-shadow: inset 0 3px 8px rgba(29, 45, 36, 0.07);
 }
 
 .team-outlook-row {
@@ -1352,11 +1492,12 @@ p {
 }
 
 .team-outlook-row.table-heading {
-  background: #f2f6f4;
+  background: linear-gradient(180deg, #e7efeb, #f5f8f6);
   color: #68756d;
   font-size: 0.7rem;
   font-weight: 800;
   text-transform: uppercase;
+  box-shadow: inset 0 -1px 0 #cedbd3;
 }
 
 .risk-low {
